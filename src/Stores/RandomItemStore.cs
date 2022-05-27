@@ -84,7 +84,7 @@ namespace TunicRandomizer.Stores
         {
             //var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
             //PropertyInfo propertyInfo = chest.GetType().GetProperty("itemContents", bindingFlags);
-            string uniqueId = "c_";
+            string uniqueId = "c";
             Item item = null;
             int money = 0;
             int quantity = 0;
@@ -116,14 +116,11 @@ namespace TunicRandomizer.Stores
                 }
             }
 
-            if(chest.chestID <= 0)
-            {
-                uniqueId += $"{Plugin.s_currentSceneId}_{Math.Abs((int)chest.transform.position.x)}_{Math.Abs((int)chest.transform.position.y)}_{Math.Abs((int)chest.transform.position.z)}";
-            }
-            else
+            if (chest.chestID > 0)
             {
                 uniqueId += chest.chestID;
             }
+            uniqueId += $"_{Plugin.s_currentSceneId}_{Math.Abs((int)chest.transform.position.x)}_{Math.Abs((int)chest.transform.position.y)}_{Math.Abs((int)chest.transform.position.z)}";
 
             return new RandomItemStore(
                 uniqueId,

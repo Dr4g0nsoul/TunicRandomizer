@@ -37,7 +37,7 @@ namespace TunicRandomizer.Patches
             }
             else if(Input.GetKeyDown(KeyCode.I))
             {
-                Plugin.ExportItems();
+                TunicRandomizer.Stores.ExportItemsUtils.ExportItems();
             }
             else if(Input.GetKeyDown(KeyCode.LeftAlt))
             {

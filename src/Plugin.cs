@@ -30,8 +30,8 @@ namespace TunicRandomizer
         public static int s_currentSceneId = -1;
 
         //Item store to export
-        public static List<string> s_traversedScenes; //To not rescan scene
         public static List<RandomItemStore> s_itemStores;
+        public static List<string> s_itemStoresAdded;
 
         //Item Randomizer reference
         //INFO: For now the randomizer starts when the first chest is loaded into a scene, to get randomness depending on when you press new game
@@ -96,22 +96,6 @@ namespace TunicRandomizer
             harmony.Patch(originalPickupItemQuantity2, new HarmonyMethod(patchedPickupItemQuantity2));
 
 
-
-        }
-
-        public static void ExportItems()
-        {
-
-            //foreach(Chest chest in Resources.FindObjectsOfTypeAll<Chest>())
-            //{
-            //    Logger.LogInfo($"HI {chest.name} {chest.chestID} {chest.GetInstanceID()}");
-            //    s_itemStores.Add(ChestItemStore.ChestToChestItemStore(chest));
-            //}
-
-            string json = s_itemStores.ToJson();
-            Logger.LogInfo("-----------------------EXPORT---------------------");
-            Logger.LogInfo(json);
-            Logger.LogInfo("-----------------------EXPORT END---------------------");
 
         }
     }
