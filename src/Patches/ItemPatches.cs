@@ -16,6 +16,7 @@ namespace TunicRandomizer.Patches
     {
 
         public static int s_fairiesFound = 0;
+        public static ChestItemStore s_nextRandomChest = null;
 
         public static bool IInteractionReceiver_Interact_ChestPatch(Item i, Chest __instance)
         {
@@ -48,113 +49,37 @@ namespace TunicRandomizer.Patches
                 Plugin.Logger.LogInfo($"Original item: {item.name} x {item.Quantity}");
             }
 
-            Plugin.s_openedChests.Add(__instance.chestID);
+            //Plugin.s_openedChests.Add(__instance.chestID); not needed anymore
 
             //RANDOMIZED ITEM
             ChestItemStore randomChestItem = Plugin.randomizer.GetRandomizedItem(__instance);
-            if(randomChestItem.itemType == "FAIRY")
+            s_nextRandomChest = randomChestItem;
+
+            if (randomChestItem.itemType == "FAIRY")
             {
-                Plugin.Logger.LogInfo($"Tandomized item: Fairy");
-                return HandleFairy(__instance);
+                Plugin.Logger.LogInfo($"Randomized item: Fairy");
+                __instance.isFairy = true;
             }
-            else if(randomChestItem.itemType == "MONEY")
+            else if (randomChestItem.itemType == "MONEY")
             {
                 Plugin.Logger.LogInfo($"Randomized item: {randomChestItem.moneyQuantity}$");
-                return HandleMoney(__instance, randomChestItem.moneyQuantity);
-            } 
-            else if(randomChestItem.itemName != null) {
-                Plugin.Logger.LogInfo($"Randomized item: {randomChestItem.itemName} x {randomChestItem.itemQuantity}");
-                return HandleEquipment(__instance, randomChestItem.itemName, randomChestItem.itemQuantity);
             }
-
-            Plugin.Logger.LogError($"Unhandled randomization for original chest: {__instance.name} ({__instance.chestID}). Random Item {randomChestItem.chestName} ({randomChestItem.chestId}) {randomChestItem.itemType}");
+            else if (randomChestItem.itemName != null)
+            {
+                Plugin.Logger.LogInfo($"Randomized item: {randomChestItem.itemName} x {randomChestItem.itemQuantity}");
+            }
+            else
+            {
+                Plugin.Logger.LogError($"Unhandled randomization for original chest: {__instance.name} ({__instance.chestID}). Random Item {randomChestItem.chestName} ({randomChestItem.chestId}) {randomChestItem.itemType}");
+            }
 
             return true;
 
-            //return HandleFairy(__instance);
-
-            //return HandleTrinket(__instance, "Trinket - MP Flasks", 1);
-
-            //return HandleEquipment(__instance, "Flask Container", 1);
-
-            //return HandleMoney(__instance, 50);
-
-
-            //__instance.isFairy = true;
-
-            //Item sword = Inventory.GetItemByName("Sword");
-            //sword.Quantity += 1;
-            //ItemPresentation.PresentItem(sword);
-            //foreach(StateVariable stateVariable in StateVariable.stateVariableList)
-            //{
-            //    Plugin.Logger.LogInfo(stateVariable.name);
-            //}
-            ////Plugin.Logger.LogInfo(__instance.openedStateVar.name);
-            //return false;
-
-            //if(__instance.chestID > 0)
-            //{
-            //    ChestItemStore newChest = Plugin.randomizer.GetRandomizedItem(__instance);
-            //    Item newItem = Inventory.GetItemByName(newChest.itemName);
-            //    newItem.Quantity += 1;
-            //}
         }
 
         private static bool HandleFairy(Chest chest)
         {
-            chest.isFairy = true; //To block the original item
             s_fairiesFound += 1;
-            return true;
-        }
-
-        /**
-         * Handles most items/eqipments including:
-         * -> Equipment, Trophies, Fairies, Supplies, Offerings, Trinkets/Cards, Gear/Flasks
-         */
-        private static bool HandleEquipment(Chest chest, string itemName, int quantity)
-        {
-            Plugin.Logger.LogInfo("HI: "+Inventory.AnyWellSupplyItemsUnlocked());
-            chest.isFairy = true; //To block the original item
-            Item newItem = Inventory.GetItemByName(itemName);
-            if (newItem != null)
-            {
-                newItem.Quantity += quantity;
-                ItemPresentation.instance.presentItem(newItem, quantity);
-            }
-            else
-            {
-                Plugin.Logger.LogError($"Could not retrieve Item \"{itemName}\" x {quantity} from Chest {chest.name} ({chest.chestID})");
-                return false;
-            }
-            return true;
-        }
-
-        private static bool HandleTrinket(Chest chest, string itemName, int quantity)
-        {
-            //bool ret = HandleEquipment(chest, itemName, quantity);
-            //if(ret)
-            //{
-            //    Item itemToConvert = Inventory.GetItemByName(itemName);
-            //    TrinketItem.trinketList.Add(trinketItem);
-            //    TrinketItem.SetSlot(trinketItem, 0);
-            //}
-            //return ret;
-            return true;
-        }
-
-        public static bool HandleMoney(Chest chest, int quantity)
-        {
-            chest.isFairy = true; //Also removes coins already in the chest
-            SmallMoneyItem.PlayerQuantity += quantity;
-            Item money = Inventory.GetItemByName("Trinket Coin");
-            money.collectionMessage = new LanguageLine();
-
-            if (quantity == 1) money.collectionMessage.text = "$$$";
-            else if(quantity < 20) money.collectionMessage.text = "$$$$$$";
-            else if(quantity < 50) money.collectionMessage.text = "$$$$$$$$$";
-            else money.collectionMessage.text = "$$$$$$$$$$$$";
-
-            ItemPresentation.PresentItem(money, quantity);
             return true;
         }
 
@@ -168,12 +93,69 @@ namespace TunicRandomizer.Patches
             if(s_fairiesFound >= 20 && !collection.allFairiesFound.BoolValue) collection.allFairiesFound.BoolValue = true;
         }
 
+        /* NOT NEEDED FOR NOW
         public static void shouldShowAsOpen_Debug_ChestPatch(Chest __instance, ref bool __result)
         {
+            if (Plugin.s_openedChests == null) Plugin.s_openedChests = new List<int>();
             if(Plugin.s_openedChests.Contains(__instance.chestID))
             {
                 __result = true;
             }
+        }
+        */
+
+        public static void moneySprayQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
+        {
+            if (s_nextRandomChest == null) return;
+
+            if (s_nextRandomChest.itemType == "MONEY")
+            {
+                __result = s_nextRandomChest.moneyQuantity;
+            }
+        }
+
+        public static void itemContentsfromDatabase_ChestPatch(Chest __instance, ref Item __result)
+        {
+            if (s_nextRandomChest == null) return;
+
+            __result = null;
+
+            if (s_nextRandomChest.itemName != null)
+            {
+                // HANDLE TRINKETS
+                if (s_nextRandomChest.itemType == Item.ItemType.TRINKETS.ToString())
+                {
+                    TrinketItem newItem = null;
+                    foreach (TrinketItem trinketItem in Resources.FindObjectsOfTypeAll<TrinketItem>())
+                    {
+                        if (trinketItem.name == s_nextRandomChest.itemName)
+                        {
+                            newItem = trinketItem;
+                            break;
+                        }
+                    }
+
+                    if (newItem == null)
+                    {
+                        Plugin.Logger.LogError($"Trinket item {s_nextRandomChest.itemName} not found in Assets");
+                    }
+                    else
+                    {
+                        __result = newItem;
+                    }
+                }
+                else // HANDLE OTHER ITEMS
+                {
+                    __result = Inventory.GetItemByName(s_nextRandomChest.itemName);
+                }
+            }
+        }
+
+        public static void itemQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
+        {
+            if (s_nextRandomChest == null) return;
+
+            __result = s_nextRandomChest.itemQuantity;
         }
     }
 }

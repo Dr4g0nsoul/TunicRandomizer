@@ -12,19 +12,19 @@ namespace TunicRandomizer.Stores
         public string denominationString;
         public int itemQuantity;
         public string itemType;
-        public string sceneName;
-        public int sceneId;
-        public string itemNearestExit;
+        //public string sceneName;
+        //public int sceneId;
+        //public string itemNearestExit;
 
-        public ItemStore (string itemName, string denominationString, int itemQuantity, string itemType, string sceneName, int sceneId, string itemNearestExit)
+        public ItemStore (string itemName, string denominationString, int itemQuantity, string itemType/*, string sceneName, int sceneId, string itemNearestExit*/)
         {
             this.itemName = itemName;
             this.denominationString = denominationString;
             this.itemQuantity = itemQuantity;
             this.itemType = itemType;
-            this.sceneName = sceneName;
-            this.sceneId = sceneId;
-            this.itemNearestExit = itemNearestExit;
+            //this.sceneName = sceneName;
+            //this.sceneId = sceneId;
+            //this.itemNearestExit = itemNearestExit;
         }
     }
 }

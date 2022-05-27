@@ -13,7 +13,7 @@
   <ItemGroup>
     <PackageReference Include="BepInEx.IL2CPP" Version="6.0.0-*" IncludeAssets="compile" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
-    <PackageReference Include="Il2CppAssemblyUnhollower.BaseLib" Version="0.4.33" />
+    <PackageReference Include="Il2CppAssemblyUnhollower.BaseLib" Version="0.4.33.3" />
     <PackageReference Include="Il2CppAssemblyUnhollower.Tool" Version="0.4.23" />
   </ItemGroup>
 

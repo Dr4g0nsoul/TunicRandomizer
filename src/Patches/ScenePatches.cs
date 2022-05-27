@@ -44,7 +44,6 @@ namespace TunicRandomizer.Patches
                 {
                     Plugin.randomizer = new ChestItemRandomizer();
                     Plugin.randomizer.Randomize();
-                    Plugin.s_openedChests = new List<int>();
                 }
 
                 first = false;

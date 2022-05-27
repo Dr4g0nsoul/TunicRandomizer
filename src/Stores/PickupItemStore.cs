@@ -9,7 +9,7 @@ namespace TunicRandomizer.Stores
 
 
         public PickupItemStore(string itemName, string denominationString, int itemQuantity, string itemType, string sceneName, int sceneId, string itemNearestExit)
-            : base(itemName, denominationString, itemQuantity, itemType, sceneName, sceneId, itemNearestExit)
+            : base(itemName, denominationString, itemQuantity, itemType/*, sceneName, sceneId, itemNearestExit*/)
         {
         }
     }

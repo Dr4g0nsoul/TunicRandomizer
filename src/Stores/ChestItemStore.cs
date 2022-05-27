@@ -16,8 +16,8 @@ namespace TunicRandomizer.Stores
         public Vector3 chestOpeningPosition;
         public int moneyQuantity;
 
-        public ChestItemStore(int chestId, string chestName, Vector3 chestOpeningPosition, string itemName, string denominationString, int itemQuantity, string itemType, string sceneName, int sceneId, string itemNearestExit, int moneyQuantity)
-            : base(itemName, denominationString, itemQuantity, itemType, sceneName, sceneId, itemNearestExit)
+        public ChestItemStore(int chestId, string chestName, Vector3 chestOpeningPosition, string itemName, string denominationString, int itemQuantity, string itemType, /*string sceneName, int sceneId, string itemNearestExit,*/ int moneyQuantity)
+            : base(itemName, denominationString, itemQuantity, itemType/*, sceneName, sceneId, itemNearestExit*/)
         {
             this.chestId = chestId;
             this.chestName = chestName;
@@ -31,6 +31,7 @@ namespace TunicRandomizer.Stores
             //PropertyInfo propertyInfo = chest.GetType().GetProperty("itemContents", bindingFlags);
             Item item = null;
             int money = 0;
+            int quantity = 0;
             if (!chest.isFairy)
             {
                 try
@@ -49,6 +50,14 @@ namespace TunicRandomizer.Stores
                 {
                     Plugin.Logger.LogError($"No money found in Chest {chest.name} ({chest.chestID})");
                 }
+                try
+                {
+                    quantity = chest.itemQuantityFromDatabase;
+                }
+                catch (Exception)
+                {
+                    Plugin.Logger.LogError($"Error reading quantity from Chest {chest.name} ({chest.chestID})");
+                }
             }
             return new ChestItemStore(
                 chest.chestID,
@@ -56,11 +65,11 @@ namespace TunicRandomizer.Stores
                 chest.characterOpeningTransform.position,
                 chest.isFairy ? "Fairy" : item?.name,
                 chest.isFairy ? "Fairy" : item?.DenominatorString,
-                chest.isFairy ? 0 : chest.itemQuantityFromDatabase,
+                chest.isFairy ? 0 : quantity,
                 chest.isFairy ? "FAIRY" : (money > 0 ? "MONEY" : (item != null ? item.Type.ToString() : "NONE/OTHER/MONEY")),
-                Plugin.s_currentSceneName,
-                Plugin.s_currentSceneId,
-                ScenePatches.GetItemNearestExit(chest.transform.position),
+                //Plugin.s_currentSceneName,
+                //Plugin.s_currentSceneId,
+                //ScenePatches.GetItemNearestExit(chest.transform.position),
                 chest.isFairy ? 0 : money
             );
         }

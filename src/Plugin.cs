@@ -35,7 +35,7 @@ namespace TunicRandomizer
         //Item Randomizer reference
         //INFO: For now the randomizer starts when the first chest is loaded into a scene, to get randomness depending on when you press new game
         public static ChestItemRandomizer randomizer;
-        public static List<int> s_openedChests;
+        //public static List<int> s_openedChests; not needed anymore
 
         public override void Load()
         {
@@ -63,17 +63,42 @@ namespace TunicRandomizer
             MethodInfo patchedOpenChest = AccessTools.Method(typeof(ItemPatches), "IInteractionReceiver_Interact_ChestPatch");
             harmony.Patch(originalOpenChest, new HarmonyMethod(patchedOpenChest));
 
+            /*
+            MethodInfo originalOpeningChest = AccessTools.PropertyGetter(typeof(Chest), "OnOpen");
+            MethodInfo patchedOpeningChest = AccessTools.Method(typeof(ItemPatches), "OnOpen_ChestPatch");
+            harmony.Patch(originalOpeningChest, new HarmonyMethod(patchedOpeningChest));
+
             MethodInfo originalCheckOpenChest = AccessTools.PropertyGetter(typeof(Chest), "shouldShowAsOpen");
             MethodInfo patchedCheckOpenChest = AccessTools.Method(typeof(ItemPatches), "shouldShowAsOpen_Debug_ChestPatch");
             harmony.Patch(originalCheckOpenChest, null, new HarmonyMethod(patchedCheckOpenChest));
+            */
 
             MethodInfo originalFairyCount = AccessTools.Method(typeof(FairyCollection), "getFairyCount");
             MethodInfo patchedFairyCount = AccessTools.Method(typeof(ItemPatches), "getFairyCount_Debug_ChestPatch");
             harmony.Patch(originalFairyCount, null, new HarmonyMethod(patchedFairyCount));
+
+            MethodInfo originalChestMoney = AccessTools.PropertyGetter(typeof(Chest), "moneySprayQuantityFromDatabase");
+            MethodInfo patchedChestMoney = AccessTools.Method(typeof(ItemPatches), "moneySprayQuantityFromDatabase_ChestPatch");
+            harmony.Patch(originalChestMoney, null, new HarmonyMethod(patchedChestMoney));
+
+            MethodInfo originalChestItem = AccessTools.PropertyGetter(typeof(Chest), "itemContentsfromDatabase");
+            MethodInfo patchedChestItem = AccessTools.Method(typeof(ItemPatches), "itemContentsfromDatabase_ChestPatch");
+            harmony.Patch(originalChestItem, null, new HarmonyMethod(patchedChestItem));
+
+            MethodInfo originalChestItemQuantity = AccessTools.PropertyGetter(typeof(Chest), "itemQuantityFromDatabase");
+            MethodInfo patchedChestItemQuantity = AccessTools.Method(typeof(ItemPatches), "itemQuantityFromDatabase_ChestPatch");
+            harmony.Patch(originalChestItemQuantity, null, new HarmonyMethod(patchedChestItemQuantity));
+
         }
 
         public static void ExportItems()
         {
+            s_itemStores.Clear();
+            foreach(Chest chest in Resources.FindObjectsOfTypeAll<Chest>())
+            {
+                Logger.LogInfo($"HI {chest.name} {chest.chestID} {chest.GetInstanceID()}");
+                s_itemStores.Add(ChestItemStore.ChestToChestItemStore(chest));
+            }
             string json = s_itemStores.ToJson();
             /*
             string json = "{";
