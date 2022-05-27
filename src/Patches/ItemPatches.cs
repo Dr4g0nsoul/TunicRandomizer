@@ -161,6 +161,9 @@ namespace TunicRandomizer.Patches
 
         public static bool onGetIt_ItemPickupPatch(ItemPickup __instance)
         {
+            //Skip money pickups
+            if (__instance.itemToGive.Type == Item.ItemType.MONEY) return true;
+
             // ORIGINAL ITEM
             RandomItemStore originalItem = RandomItemStore.PickupItemToRandomItemStore(__instance);
             Plugin.Logger.LogInfo($"Original pickup item: {__instance.itemToGive.name} ({__instance.itemToGive.Type}) x {__instance.QuantityToGive}");
@@ -171,14 +174,54 @@ namespace TunicRandomizer.Patches
             if (randomPickupItem.itemType == "FAIRY")
             {
                 Plugin.Logger.LogInfo($"Randomized item: Fairy");
+                ItemPresentation.PresentItem(null);
                 s_fairiesFound += 1;
             }
             else if (randomPickupItem.itemType == "MONEY")
             {
+                SmallMoneyItem.PlayerQuantity += randomPickupItem.moneyQuantity;
+                Item money = Inventory.GetItemByName("Trinket Coin");
+                money.collectionMessage = new LanguageLine();
+
+                if (randomPickupItem.moneyQuantity == 1) money.collectionMessage.text = "$$$";
+                else if (randomPickupItem.moneyQuantity < 20) money.collectionMessage.text = "$$$$$$";
+                else if (randomPickupItem.moneyQuantity < 50) money.collectionMessage.text = "$$$$$$$$$";
+                else money.collectionMessage.text = "$$$$$$$$$$$$";
+
+                ItemPresentation.PresentItem(money, randomPickupItem.moneyQuantity);
+
                 Plugin.Logger.LogInfo($"Randomized item: {randomPickupItem.moneyQuantity}$");
             }
             else if (randomPickupItem.itemName != null)
             {
+                // HANDLE TRINKETS
+                if (randomPickupItem.itemType == Item.ItemType.TRINKETS.ToString())
+                {
+                    TrinketItem newItem = null;
+                    foreach (TrinketItem trinketItem in Resources.FindObjectsOfTypeAll<TrinketItem>())
+                    {
+                        if (trinketItem.name == randomPickupItem.itemName)
+                        {
+                            newItem = trinketItem;
+                            break;
+                        }
+                    }
+
+                    if (newItem == null)
+                    {
+                        Plugin.Logger.LogError($"Trinket item {s_nextRandomChest.itemName} not found in Assets");
+                    }
+
+                    newItem.Quantity += 1;
+                    ItemPresentation.PresentItem(newItem, randomPickupItem.itemQuantity);
+                    newItem.UnlockAcquisitionAchievement();
+                }
+                else // HANDLE OTHER ITEMS
+                {
+                    Item newItem = Inventory.GetItemByName(randomPickupItem.itemName);
+                    newItem.Quantity += randomPickupItem.itemQuantity;
+                    ItemPresentation.PresentItem(newItem, randomPickupItem.itemQuantity);
+                }
                 Plugin.Logger.LogInfo($"Randomized item: {randomPickupItem.itemName} ({randomPickupItem.itemType}) x {randomPickupItem.itemQuantity}");
             }
             else

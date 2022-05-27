@@ -48,9 +48,10 @@ namespace TunicRandomizer.Randomizer
                 }
                 if (instanceId == null)
                 {
-                    Plugin.Logger.LogWarning("THIS CHEST HAS INSTANCE ID NULL AND WAS THEREFORE (FOR NOW) NOT ADDED TO THE RANDOMIZER POOL");
+                    Plugin.Logger.LogWarning("THIS CHEST HAS INSTANCE ID NULL AND WAS THEREFORE NOT ADDED TO THE RANDOMIZER POOL");
                     return originalChestItem;
                 }
+                originalItem = originalChestItem;
             }
 
             if(itemPickup != null)
@@ -63,9 +64,10 @@ namespace TunicRandomizer.Randomizer
                 }
                 if (instanceId == null)
                 {
-                    Plugin.Logger.LogWarning("THIS ITEM PICKUP HAS INSTANCE ID NULL AND WAS THEREFORE (FOR NOW) NOT ADDED TO THE RANDOMIZER POOL");
+                    Plugin.Logger.LogWarning("THIS ITEM PICKUP HAS INSTANCE ID NULL AND WAS THEREFORE NOT ADDED TO THE RANDOMIZER POOL");
                     return originalItemPickup;
                 }
+                originalItem = originalItemPickup;
             }
 
             //Get index of chestId in list and swap it out using m_chestIndexMatching
