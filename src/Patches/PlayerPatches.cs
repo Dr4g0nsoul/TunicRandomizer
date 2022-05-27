@@ -31,9 +31,9 @@ namespace TunicRandomizer.Patches
         {
             if(Input.GetKeyDown(KeyCode.O))
             {
-                if (Plugin.s_chestItemList == null) Plugin.s_chestItemList= new Queue<Chest>();
-                Chest warpChest = Plugin.s_chestItemList.Dequeue();
-                __instance.transform.position = warpChest.characterOpeningTransform.position;
+                if (Plugin.s_sceneItemList == null) Plugin.s_sceneItemList= new Queue<Transform>();
+                Transform warpItemTransform = Plugin.s_sceneItemList.Dequeue();
+                __instance.transform.position = warpItemTransform.position;
             }
             else if(Input.GetKeyDown(KeyCode.I))
             {

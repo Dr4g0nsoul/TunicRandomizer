@@ -30,61 +30,90 @@ namespace TunicRandomizer.Patches
             }
             Plugin.Logger.LogInfo("------------ SPAWN POINTS END ------------");
 
-            Plugin.Logger.LogInfo("------------ CHESTS ------------");
             if (Plugin.s_traversedScenes == null) Plugin.s_traversedScenes = new List<string>();
-            if (Plugin.s_traversedScenes.Contains(loadingScene.name)) Plugin.Logger.LogInfo($"Scene {loadingScene.name} already scanned for chests");
+            if (Plugin.s_traversedScenes.Contains(loadingScene.name)) Plugin.Logger.LogInfo($"Scene {loadingScene.name} already scanned for items");
+
+            Plugin.Logger.LogInfo("------------ CHESTS ------------");
             
             bool first = true;
-            if (Plugin.s_chestItemList == null) Plugin.s_chestItemList = new Queue<Chest>();
-            else Plugin.s_chestItemList.Clear();
+            if (Plugin.s_sceneItemList == null) Plugin.s_sceneItemList = new Queue<Transform>();
+            else Plugin.s_sceneItemList.Clear();
             foreach (Chest chest in GameObject.FindObjectsOfType<Chest>())
             {
                 if (!first) Plugin.Logger.LogInfo("-------------------------------");
                 else if(Plugin.randomizer == null || !Plugin.randomizer.IsRandomized)
                 {
-                    Plugin.randomizer = new ChestItemRandomizer();
+                    Plugin.randomizer = new ItemRandomizer();
                     Plugin.randomizer.Randomize();
                 }
 
                 first = false;
                 AddChestToFoundChests(chest);
             }
-            Plugin.s_traversedScenes.Add(loadingScene.name);
+            if (!Plugin.s_traversedScenes.Contains(loadingScene.name)) Plugin.s_traversedScenes.Add(loadingScene.name);
             Plugin.Logger.LogInfo("------------ CHESTS END ------------");
+
+            Plugin.Logger.LogInfo("------------ PICKUP ITEMS ------------");
+
+            first = true;
+            foreach (ItemPickup itemPickup in GameObject.FindObjectsOfType<ItemPickup>())
+            {
+                if (!first) Plugin.Logger.LogInfo("-------------------------------");
+                else if (Plugin.randomizer == null || !Plugin.randomizer.IsRandomized)
+                {
+                    Plugin.randomizer = new ItemRandomizer();
+                    Plugin.randomizer.Randomize();
+                }
+
+                first = false;
+                AddPickupItemToFoundItems(itemPickup);
+            }
+            if(!Plugin.s_traversedScenes.Contains(loadingScene.name)) Plugin.s_traversedScenes.Add(loadingScene.name);
+            Plugin.Logger.LogInfo("------------ PICKUP ITEMS END ------------");
         }
 
         private static void AddChestToFoundChests(Chest chest)
         {
-            Plugin.Logger.LogInfo($"Chest {chest.name} ({chest.chestID}): ");
+            Plugin.Logger.LogInfo($"Chest {chest.name} ({chest.GetInstanceID()}): ");
             
-            Plugin.s_chestItemList.Enqueue(chest);
+            Plugin.s_sceneItemList.Enqueue(chest.characterOpeningTransform);
 
             // Convert into Chest item Store
-            ChestItemStore chestItemStore = ChestItemStore.ChestToChestItemStore(chest);
-
-            if (chestItemStore != null)
-            {
-                Plugin.Logger.LogInfo($"Item: {chestItemStore.itemName} ({chestItemStore.itemType})");
-            }
-            if (chest.isFairy)
-            {
-                Plugin.Logger.LogInfo($"Item: Fairy");
-            }
-            if (chest.WasCollected)
-            {
-                Plugin.Logger.LogInfo("already collected");
-            }
+            RandomItemStore chestItemStore = RandomItemStore.ChestToRandomItemStore(chest);
 
             // ! NOT ADDING FAIRIES AND OTHER STUFF WITH CHESTID 0 FOR NOW
-            if (chest.chestID > 0)
+            if (chest.GetInstanceID() >= 0)
             {
                 // Add chest to store for output
-                if (Plugin.s_itemStores == null) Plugin.s_itemStores = new List<ItemStore>();
+                if (Plugin.s_itemStores == null) Plugin.s_itemStores = new List<RandomItemStore>();
                 Plugin.s_itemStores.Add(chestItemStore);
             }
             else
             {
-                Plugin.Logger.LogWarning("THIS CHEST HAS ID <= 0 AND WAS THEREFORE (FOR NOW) NOT ADDED TO THE RANDOMIZER POOL");
+                Plugin.Logger.LogWarning("THIS CHEST HAS INSTANCE_ID < 0 AND WAS THEREFORE (FOR NOW) NOT ADDED TO THE RANDOMIZER POOL");
+            }
+
+        }
+
+        private static void AddPickupItemToFoundItems(ItemPickup item)
+        {
+            Plugin.Logger.LogInfo($"Pickup item {item.itemToGive.name} ({item.itemToGive.Type}) x {item.QuantityToGive}");
+
+            Plugin.s_sceneItemList.Enqueue(item.transform);
+
+            // Convert into Chest item Store
+            RandomItemStore chestItemStore = RandomItemStore.PickupItemToRandomItemStore(item);
+
+            // ! NOT ADDING FAIRIES AND OTHER STUFF WITH CHESTID 0 FOR NOW
+            if (item.GetInstanceID() >= 0)
+            {
+                // Add chest to store for output
+                if (Plugin.s_itemStores == null) Plugin.s_itemStores = new List<RandomItemStore>();
+                Plugin.s_itemStores.Add(chestItemStore);
+            }
+            else
+            {
+                Plugin.Logger.LogWarning("THIS PICKUP ITEM HAS INSTANCE_ID < 0 AND WAS THEREFORE (FOR NOW) NOT ADDED TO THE RANDOMIZER POOL");
             }
 
         }

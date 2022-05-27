@@ -9,6 +9,7 @@ using TunicRandomizer.Patches;
 using TunicRandomizer.Randomizer;
 using TunicRandomizer.Stores;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace TunicRandomizer
 {
@@ -19,7 +20,7 @@ namespace TunicRandomizer
         public static ManualLogSource Logger;
 
         //Chest item list to warp to
-        public static Queue<Chest> s_chestItemList;
+        public static Queue<Transform> s_sceneItemList;
 
         //Portal list spawn points to use
         public static List<ScenePatches.SpawnPoint> s_spawnPoints;
@@ -30,11 +31,11 @@ namespace TunicRandomizer
 
         //Item store to export
         public static List<string> s_traversedScenes; //To not rescan scene
-        public static List<ItemStore> s_itemStores;
+        public static List<RandomItemStore> s_itemStores;
 
         //Item Randomizer reference
         //INFO: For now the randomizer starts when the first chest is loaded into a scene, to get randomness depending on when you press new game
-        public static ChestItemRandomizer randomizer;
+        public static ItemRandomizer randomizer;
         //public static List<int> s_openedChests; not needed anymore
 
         public override void Load()
@@ -89,63 +90,25 @@ namespace TunicRandomizer
             MethodInfo patchedChestItemQuantity = AccessTools.Method(typeof(ItemPatches), "itemQuantityFromDatabase_ChestPatch");
             harmony.Patch(originalChestItemQuantity, null, new HarmonyMethod(patchedChestItemQuantity));
 
+
+            MethodInfo originalPickupItemQuantity2 = AccessTools.Method(typeof(ItemPickup), "onGetIt");
+            MethodInfo patchedPickupItemQuantity2 = AccessTools.Method(typeof(ItemPatches), "onGetIt_ItemPickupPatch");
+            harmony.Patch(originalPickupItemQuantity2, new HarmonyMethod(patchedPickupItemQuantity2));
+
+
+
         }
 
         public static void ExportItems()
         {
-            s_itemStores.Clear();
-            foreach(Chest chest in Resources.FindObjectsOfTypeAll<Chest>())
-            {
-                Logger.LogInfo($"HI {chest.name} {chest.chestID} {chest.GetInstanceID()}");
-                s_itemStores.Add(ChestItemStore.ChestToChestItemStore(chest));
-            }
+
+            //foreach(Chest chest in Resources.FindObjectsOfTypeAll<Chest>())
+            //{
+            //    Logger.LogInfo($"HI {chest.name} {chest.chestID} {chest.GetInstanceID()}");
+            //    s_itemStores.Add(ChestItemStore.ChestToChestItemStore(chest));
+            //}
+
             string json = s_itemStores.ToJson();
-            /*
-            string json = "{";
-            json += "\"chests\":[";
-            bool isFirst = true;
-            foreach (ItemStore item in s_itemStores)
-            {
-                ChestItemStore chestItem = item as ChestItemStore;
-                if (chestItem != null)
-                {
-                    if (isFirst)
-                    {
-                        isFirst = false;
-                        json += "{";
-                    }
-                    else
-                    {
-                        json += ",{";
-                    }
-
-                    json += $"\"chestId\":\"{chestItem.chestId}\",";
-                    json += $"\"chestName\":\"{chestItem.chestName}\",";
-                    json += "\"chestOpeningPosition\":{";
-                    json += $"\"x\":{chestItem.chestOpeningPosition.x.ToString().Replace(',', '.')},";
-                    json += $"\"y\":{chestItem.chestOpeningPosition.y.ToString().Replace(',', '.')},";
-                    json += $"\"z\":{chestItem.chestOpeningPosition.z.ToString().Replace(',', '.')}";
-                    json += "},";
-                    json += $"\"itemName\":\"{chestItem.itemName}\",";
-                    json += $"\"denominatorString\":\"{chestItem.denominatorString}\",";
-                    json += $"\"itemQuantity\":{chestItem.itemQuantity},";
-                    json += $"\"itemType\":\"{chestItem.itemType}\",";
-                    json += $"\"sceneName\":\"{chestItem.sceneName}\",";
-                    json += $"\"sceneId\":{chestItem.sceneId},";
-                    json += $"\"itemNearestExit\":\"{chestItem.itemNearestExit}\"";
-
-                    json += "}";
-
-                    //ublic string itemName;
-                    //public string denominatorString;
-                    //public int itemQuantity;
-                    //public Item.ItemType itemType;
-                    //public string sceneName;
-                    //public int sceneId;
-                }
-            }
-            json += "]}";
-            */
             Logger.LogInfo("-----------------------EXPORT---------------------");
             Logger.LogInfo(json);
             Logger.LogInfo("-----------------------EXPORT END---------------------");

@@ -16,7 +16,7 @@ namespace TunicRandomizer.Patches
     {
 
         public static int s_fairiesFound = 0;
-        public static ChestItemStore s_nextRandomChest = null;
+        public static RandomItemStore s_nextRandomChest = null;
 
         public static bool IInteractionReceiver_Interact_ChestPatch(Item i, Chest __instance)
         {
@@ -50,17 +50,19 @@ namespace TunicRandomizer.Patches
             }
 
             //Plugin.s_openedChests.Add(__instance.chestID); not needed anymore
+            RandomItemStore originalItem = RandomItemStore.ChestToRandomItemStore(__instance);
 
             //RANDOMIZED ITEM
-            ChestItemStore randomChestItem = Plugin.randomizer.GetRandomizedItem(__instance);
+            RandomItemStore randomChestItem = Plugin.randomizer.GetRandomizedItem(originalItem.instanceId, __instance);
             s_nextRandomChest = randomChestItem;
 
             if (randomChestItem.itemType == "FAIRY")
             {
                 Plugin.Logger.LogInfo($"Randomized item: Fairy");
                 __instance.isFairy = true;
-            }
-            else if (randomChestItem.itemType == "MONEY")
+                s_fairiesFound += 1;
+            } else __instance.isFairy = false;
+            if (randomChestItem.itemType == "MONEY")
             {
                 Plugin.Logger.LogInfo($"Randomized item: {randomChestItem.moneyQuantity}$");
             }
@@ -70,17 +72,11 @@ namespace TunicRandomizer.Patches
             }
             else
             {
-                Plugin.Logger.LogError($"Unhandled randomization for original chest: {__instance.name} ({__instance.chestID}). Random Item {randomChestItem.chestName} ({randomChestItem.chestId}) {randomChestItem.itemType}");
+                Plugin.Logger.LogError($"Unhandled randomization for original chest: {__instance.name} ({originalItem.instanceId}). Random Item {randomChestItem.itemContainerName} ({randomChestItem.instanceId}) {randomChestItem.itemType}");
             }
 
             return true;
 
-        }
-
-        private static bool HandleFairy(Chest chest)
-        {
-            s_fairiesFound += 1;
-            return true;
         }
 
         /**
@@ -93,7 +89,7 @@ namespace TunicRandomizer.Patches
             if(s_fairiesFound >= 20 && !collection.allFairiesFound.BoolValue) collection.allFairiesFound.BoolValue = true;
         }
 
-        /* NOT NEEDED FOR NOW
+        /* NOT NEEDED FOR NOW EVENTUALLY FOR FAIRY CHESTS
         public static void shouldShowAsOpen_Debug_ChestPatch(Chest __instance, ref bool __result)
         {
             if (Plugin.s_openedChests == null) Plugin.s_openedChests = new List<int>();
@@ -156,6 +152,43 @@ namespace TunicRandomizer.Patches
             if (s_nextRandomChest == null) return;
 
             __result = s_nextRandomChest.itemQuantity;
+        }
+
+
+
+
+
+
+        public static bool onGetIt_ItemPickupPatch(ItemPickup __instance)
+        {
+            // ORIGINAL ITEM
+            RandomItemStore originalItem = RandomItemStore.PickupItemToRandomItemStore(__instance);
+            Plugin.Logger.LogInfo($"Original pickup item: {__instance.itemToGive.name} ({__instance.itemToGive.Type}) x {__instance.QuantityToGive}");
+
+            //RANDOMIZED ITEM
+            RandomItemStore randomPickupItem = Plugin.randomizer.GetRandomizedItem(originalItem.instanceId, null, __instance);
+
+            if (randomPickupItem.itemType == "FAIRY")
+            {
+                Plugin.Logger.LogInfo($"Randomized item: Fairy");
+                s_fairiesFound += 1;
+            }
+            else if (randomPickupItem.itemType == "MONEY")
+            {
+                Plugin.Logger.LogInfo($"Randomized item: {randomPickupItem.moneyQuantity}$");
+            }
+            else if (randomPickupItem.itemName != null)
+            {
+                Plugin.Logger.LogInfo($"Randomized item: {randomPickupItem.itemName} ({randomPickupItem.itemType}) x {randomPickupItem.itemQuantity}");
+            }
+            else
+            {
+                Plugin.Logger.LogError($"Unhandled randomization for original pickup item: {__instance.name} ({originalItem.instanceId}). Random Item {randomPickupItem.itemContainerName} ({randomPickupItem.instanceId}) {randomPickupItem.itemType}");
+            }
+
+            __instance.pickupStateVar.BoolValue = true;
+
+            return false;
         }
     }
 }
