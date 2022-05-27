@@ -1,6 +1,6 @@
 # TunicRandomizer
 - Still work in progress. Basic randomization works (Chests only without trinkets).
-- Pickups follow shortly with trinket support.
+- All Items besides Shop Items and Pages are randomized
 - Bepinex IL2CPP (Bleeding Edge) needed: https://builds.bepinex.dev/projects/bepinex_be
 -- Copy Bepinex Folder in Steam game Folder and Start the Game
 -- More files should appear with a unhollowed Folder inside the Bepinex Folder
