@@ -1,12 +1,3 @@
-# TunicRandomizer
-- Still work in progress. Basic randomization works (Chests only without trinkets).
-- All Items besides Shop Items and Pages are randomized
-- Bepinex IL2CPP (Bleeding Edge) needed: https://builds.bepinex.dev/projects/bepinex_be
--- Copy Bepinex Folder in Steam game Folder and Start the Game
--- More files should appear with a unhollowed Folder inside the Bepinex Folder
--- Include them into your vscode project and use Programms like dotPeek to find hooks.
-- To play... better wait until the first release xD
-
 # Tunic Item Randomizer
 
 ## Randomized Items as for now:
@@ -17,6 +8,14 @@
 ## Missing items to be added in the randomization pool
 - Shop Items
 - Pages
+
+## How to install
+- Be sure to use the Windows Steam version of Tunic
+- Download the latest version of Bepinex IL2CPP (Bleeding Edge): https://builds.bepinex.dev/projects/bepinex_be
+- Extract Bepinex into the Game folder
+- Start the game once (This should add more Folders inside the BepInEx Folder located in the Game folder)
+- Copy the randomizer dll into BepInEx/plugins
+- Start Tunic again and start a new game
 
 ## Useful hints
 - Randomization does NOT prevent softlocks as of yet. Use Keyboard Button I to spawn bombs if you are stuck at the beginning (with the cost of half of your HP :P).
