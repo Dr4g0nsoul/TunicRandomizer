@@ -1,4 +1,6 @@
 # Tunic Item Randomizer
+![image](https://user-images.githubusercontent.com/11662770/170832618-30b5e7e6-213a-4464-8fbe-bd7ca397a414.png)
+![image](https://user-images.githubusercontent.com/11662770/170832683-2b7c7018-980d-463a-bd83-536c5f9bcb8d.png)
 
 ## Randomized Items as for now:
 - All chest Items including fairies
