@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using TunicRandomizer;
+using UnhollowerBaseLib;
 using UnityEngine;
 
 namespace TunicRandomizer.Patches
@@ -29,30 +30,46 @@ namespace TunicRandomizer.Patches
 
         public static void Update_PlayerPatches(PlayerCharacter __instance)
         {
-            if(Input.GetKeyDown(KeyCode.O))
+            if (false && Input.GetKeyDown(KeyCode.O)) //Disable warp to chest functionality for now
             {
-                if (Plugin.s_sceneItemList == null) Plugin.s_sceneItemList= new Queue<Transform>();
+                if (Plugin.s_sceneItemList == null) Plugin.s_sceneItemList = new Queue<Transform>();
                 Transform warpItemTransform = Plugin.s_sceneItemList.Dequeue();
                 __instance.transform.position = warpItemTransform.position;
             }
-            else if(Input.GetKeyDown(KeyCode.I))
+            else if (Input.GetKeyDown(KeyCode.I))
             {
-                TunicRandomizer.Stores.ExportItemsUtils.ExportItems();
+                Item helpItem = Inventory.GetItemByName("Firecracker");
+                int helpItemGiveQuantity = 4;
+
+                int quantityDelta = Mathf.Max(helpItemGiveQuantity - helpItem.Quantity, 0);
+                if (quantityDelta > 0)
+                {
+                    __instance.hp /= 2;
+                    helpItem.Quantity = helpItemGiveQuantity;
+                    ItemPresentation.PresentItem(helpItem, quantityDelta);
+                } 
+                else
+                {
+                    LanguageLine maxHelpItemReachedText = ScriptableObject.CreateInstance<LanguageLine>();
+                    maxHelpItemReachedText.text = $"\"You cannot have more than \"";
+                    NPCDialogue.DisplayDialogue(maxHelpItemReachedText, true);
+                }
+
             }
-            else if(Input.GetKeyDown(KeyCode.LeftAlt))
+            else if (Input.GetKeyDown(KeyCode.LeftAlt))
             {
-                if(s_spawnInputStarted)
+                if (s_spawnInputStarted)
                 {
                     ScenePatches.SpawnPoint warpPoint = null;
                     int warpIndex;
-                    if(Int32.TryParse(s_spawnInput, out warpIndex))
+                    if (Int32.TryParse(s_spawnInput, out warpIndex))
                     {
-                        if(warpIndex >= 0 && warpIndex < Plugin.s_spawnPoints.Count)
+                        if (warpIndex >= 0 && warpIndex < Plugin.s_spawnPoints.Count)
                         {
                             warpPoint = Plugin.s_spawnPoints[warpIndex];
                         }
                     }
-                    if(warpPoint != null)
+                    if (warpPoint != null)
                     {
                         Plugin.Logger.LogInfo($"Warp to warpPoint ({warpIndex}) in scene {warpPoint.scene} at destination {warpPoint.id}");
                         __instance.transform.position = warpPoint.position;
@@ -61,15 +78,27 @@ namespace TunicRandomizer.Patches
                     {
                         Plugin.Logger.LogInfo($"Invalid warp point {s_spawnInput}");
                     }
-                } 
+                }
                 else
                 {
                     s_spawnInput = "";
                 }
                 s_spawnInputStarted = !s_spawnInputStarted;
             }
-            
-            if(s_spawnInputStarted)
+            else if (Input.GetKeyDown(KeyCode.T))
+            {
+                LanguageLine showSeed = ScriptableObject.CreateInstance<LanguageLine>();
+                showSeed.text = $"\"Seed: {Plugin.randomizer.Seed}\"";
+                NPCDialogue.DisplayDialogue(showSeed, false);
+            }
+            else if(Input.GetKeyDown(KeyCode.N))
+            {
+                bool isNight = !CycleController.IsNight;
+                CycleController.IsNight = isNight;
+                CycleController.nightStateVar.BoolValue = isNight;
+            }
+
+            if (s_spawnInputStarted)
             {
                 if (Input.GetKeyDown(KeyCode.Alpha0)) s_spawnInput += "0";
                 else if(Input.GetKeyDown(KeyCode.Alpha1)) s_spawnInput += "1";
@@ -84,5 +113,10 @@ namespace TunicRandomizer.Patches
             }
         }
 
+
+        public static void Text_LanguagePatch(LanguageLine script, bool pauseTime)
+        {
+                Plugin.Logger.LogInfo($"Said Text: {script.text} | Pause: {pauseTime}");
+        }
     }
 }

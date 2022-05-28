@@ -17,9 +17,12 @@ namespace TunicRandomizer.Patches
 
         public static int s_fairiesFound = 0;
         public static RandomItemStore s_nextRandomChest = null;
+        public static bool s_isOriginalFairyChest = false;
 
         public static bool IInteractionReceiver_Interact_ChestPatch(Item i, Chest __instance)
         {
+            s_isOriginalFairyChest = false;
+            s_nextRandomChest = null;
             // ORIGINAL ITEM
             Item item = null;
             int money = 0;
@@ -44,9 +47,14 @@ namespace TunicRandomizer.Patches
             if (money > 0) {
                 Plugin.Logger.LogInfo($"Original item: {money}$");
             }
-            else
+            else if(item != null)
             {
                 Plugin.Logger.LogInfo($"Original item: {item.name} x {item.Quantity}");
+            }
+            else
+            {
+                Plugin.Logger.LogWarning($"Chest: {__instance.name} has no valid contents or is fairy chest");
+                s_isOriginalFairyChest = true;
             }
 
             //Plugin.s_openedChests.Add(__instance.chestID); not needed anymore
@@ -61,6 +69,10 @@ namespace TunicRandomizer.Patches
                 Plugin.Logger.LogInfo($"Randomized item: Fairy");
                 __instance.isFairy = true;
                 s_fairiesFound += 1;
+
+                LanguageLine fairyAcquiredText = ScriptableObject.CreateInstance<LanguageLine>();
+                fairyAcquiredText.text = $"\"Fairy Acquired\"";
+                NPCDialogue.DisplayDialogue(fairyAcquiredText, true);
             } else __instance.isFairy = false;
             if (randomChestItem.itemType == "MONEY")
             {
@@ -100,19 +112,21 @@ namespace TunicRandomizer.Patches
         }
         */
 
-        public static void moneySprayQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
+        public static bool moneySprayQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
         {
-            if (s_nextRandomChest == null) return;
+            if (s_nextRandomChest == null) return true;
 
             if (s_nextRandomChest.itemType == "MONEY")
             {
                 __result = s_nextRandomChest.moneyQuantity;
             }
+
+            return false;
         }
 
-        public static void itemContentsfromDatabase_ChestPatch(Chest __instance, ref Item __result)
+        public static bool itemContentsfromDatabase_ChestPatch(Chest __instance, ref Item __result)
         {
-            if (s_nextRandomChest == null) return;
+            if (s_nextRandomChest == null) return true;
 
             __result = null;
 
@@ -145,13 +159,15 @@ namespace TunicRandomizer.Patches
                     __result = Inventory.GetItemByName(s_nextRandomChest.itemName);
                 }
             }
+            return false;
         }
 
-        public static void itemQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
+        public static bool itemQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
         {
-            if (s_nextRandomChest == null) return;
+            if (s_nextRandomChest == null) return true;
 
             __result = s_nextRandomChest.itemQuantity;
+            return false;
         }
 
 
@@ -173,22 +189,19 @@ namespace TunicRandomizer.Patches
 
             if (randomPickupItem.itemType == "FAIRY")
             {
+                LanguageLine fairyAcquiredText = ScriptableObject.CreateInstance<LanguageLine>();
+                fairyAcquiredText.text = $"\"Fairy Acquired\"";
+                NPCDialogue.DisplayDialogue(fairyAcquiredText, true);
+
                 Plugin.Logger.LogInfo($"Randomized item: Fairy");
-                ItemPresentation.PresentItem(null);
                 s_fairiesFound += 1;
             }
             else if (randomPickupItem.itemType == "MONEY")
             {
                 SmallMoneyItem.PlayerQuantity += randomPickupItem.moneyQuantity;
-                Item money = Inventory.GetItemByName("Trinket Coin");
-                money.collectionMessage = new LanguageLine();
-
-                if (randomPickupItem.moneyQuantity == 1) money.collectionMessage.text = "$$$";
-                else if (randomPickupItem.moneyQuantity < 20) money.collectionMessage.text = "$$$$$$";
-                else if (randomPickupItem.moneyQuantity < 50) money.collectionMessage.text = "$$$$$$$$$";
-                else money.collectionMessage.text = "$$$$$$$$$$$$";
-
-                ItemPresentation.PresentItem(money, randomPickupItem.moneyQuantity);
+                LanguageLine moneyEarnedText = ScriptableObject.CreateInstance<LanguageLine>();
+                moneyEarnedText.text = $"\"You get {randomPickupItem.moneyQuantity} $\"";
+                NPCDialogue.DisplayDialogue(moneyEarnedText, true);
 
                 Plugin.Logger.LogInfo($"Randomized item: {randomPickupItem.moneyQuantity}$");
             }

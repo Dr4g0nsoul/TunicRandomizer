@@ -20,6 +20,8 @@ namespace TunicRandomizer.Randomizer
             }
         }
 
+        public Random Random { get { return random; } }
+
         public SeedRandomizer() : this(Environment.TickCount)
         {
         }
