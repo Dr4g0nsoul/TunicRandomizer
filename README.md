@@ -19,10 +19,10 @@
 - Start Tunic again and start a new game
 
 ## Useful hints
-- Randomization does NOT prevent softlocks as of yet. Use Keyboard Button I to spawn bombs if you are stuck at the beginning (with the cost of half of your HP :P).
+- Randomization does NOT prevent softlocks as of yet. Use Keyboard Button `[I]` to spawn bombs if you are stuck at the beginning (with the cost of half of your HP :P).
 - If you are stuck inside a level with no way out press Left-ALT followed by 0 and then again LEFT-ALT. This will warp you to the first entrance. If you want you can use other numbers to travel to other level exits if you so choose.
-- Use Keyboard Button T to look up your current Seed.
-- You can also use Keyboard Button N to switch between night and daytime.
+- Use Keyboard Button `T` to look up your current Seed.
+- You can also use Keyboard Button `N` to switch between night and daytime.
 
 ## Future improvements and bugfixes planned
 - Use of custom seeds
