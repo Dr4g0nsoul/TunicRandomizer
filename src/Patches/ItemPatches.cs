@@ -19,6 +19,44 @@ namespace TunicRandomizer.Patches
         public static RandomItemStore s_nextRandomChest = null;
         public static bool s_isOriginalFairyChest = false;
 
+        public static void ApplyPatches(Harmony harmony)
+        {
+            /* ITEM RANDO PATCHES */
+            MethodInfo originalOpenChest = AccessTools.Method(typeof(Chest), "IInteractionReceiver_Interact");
+            MethodInfo patchedOpenChest = AccessTools.Method(typeof(ItemPatches), "IInteractionReceiver_Interact_ChestPatch");
+            harmony.Patch(originalOpenChest, new HarmonyMethod(patchedOpenChest));
+
+            /*
+            MethodInfo originalOpeningChest = AccessTools.PropertyGetter(typeof(Chest), "OnOpen");
+            MethodInfo patchedOpeningChest = AccessTools.Method(typeof(ItemPatches), "OnOpen_ChestPatch");
+            harmony.Patch(originalOpeningChest, new HarmonyMethod(patchedOpeningChest));
+
+            MethodInfo originalCheckOpenChest = AccessTools.PropertyGetter(typeof(Chest), "shouldShowAsOpen");
+            MethodInfo patchedCheckOpenChest = AccessTools.Method(typeof(ItemPatches), "shouldShowAsOpen_Debug_ChestPatch");
+            harmony.Patch(originalCheckOpenChest, null, new HarmonyMethod(patchedCheckOpenChest));
+            */
+
+            MethodInfo originalFairyCount = AccessTools.Method(typeof(FairyCollection), "getFairyCount");
+            MethodInfo patchedFairyCount = AccessTools.Method(typeof(ItemPatches), "getFairyCount_Debug_ChestPatch");
+            harmony.Patch(originalFairyCount, null, new HarmonyMethod(patchedFairyCount));
+
+            MethodInfo originalChestMoney = AccessTools.PropertyGetter(typeof(Chest), "moneySprayQuantityFromDatabase");
+            MethodInfo patchedChestMoney = AccessTools.Method(typeof(ItemPatches), "moneySprayQuantityFromDatabase_ChestPatch");
+            harmony.Patch(originalChestMoney, new HarmonyMethod(patchedChestMoney));
+
+            MethodInfo originalChestItem = AccessTools.PropertyGetter(typeof(Chest), "itemContentsfromDatabase");
+            MethodInfo patchedChestItem = AccessTools.Method(typeof(ItemPatches), "itemContentsfromDatabase_ChestPatch");
+            harmony.Patch(originalChestItem, new HarmonyMethod(patchedChestItem));
+
+            MethodInfo originalChestItemQuantity = AccessTools.PropertyGetter(typeof(Chest), "itemQuantityFromDatabase");
+            MethodInfo patchedChestItemQuantity = AccessTools.Method(typeof(ItemPatches), "itemQuantityFromDatabase_ChestPatch");
+            harmony.Patch(originalChestItemQuantity, new HarmonyMethod(patchedChestItemQuantity));
+
+            MethodInfo originalPickupItem = AccessTools.Method(typeof(ItemPickup), "onGetIt");
+            MethodInfo patchedPickupItem = AccessTools.Method(typeof(ItemPatches), "onGetIt_ItemPickupPatch");
+            harmony.Patch(originalPickupItem, new HarmonyMethod(patchedPickupItem));
+        }
+
         public static bool IInteractionReceiver_Interact_ChestPatch(Item i, Chest __instance)
         {
             s_isOriginalFairyChest = false;

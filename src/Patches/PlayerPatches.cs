@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using TunicRandomizer;
 using UnhollowerBaseLib;
@@ -13,6 +14,19 @@ namespace TunicRandomizer.Patches
 
         public static string s_spawnInput;
         public static bool s_spawnInputStarted = false;
+
+
+        public static void ApplyPatches(Harmony harmony)
+        {
+            /* PLAYER PATCHES */
+            //MethodInfo playerStartOriginal = AccessTools.Method(typeof(PlayerCharacter), "Start");
+            //MethodInfo playerStartPatch = AccessTools.Method(typeof(PlayerPatches), "Start_PlayerPatches");
+            //harmony.Patch(playerStartOriginal, null, new HarmonyMethod(playerStartPatch));
+
+            MethodInfo playerUpdateOriginal = AccessTools.Method(typeof(PlayerCharacter), "Update");
+            MethodInfo playerUpdatePatch = AccessTools.Method(typeof(PlayerPatches), "Update_PlayerPatches");
+            harmony.Patch(playerUpdateOriginal, null, new HarmonyMethod(playerUpdatePatch));
+        }
 
         public static void Start_PlayerPatches(PlayerCharacter __instance)
         {
@@ -111,12 +125,6 @@ namespace TunicRandomizer.Patches
                 else if(Input.GetKeyDown(KeyCode.Alpha8)) s_spawnInput += "8";
                 else if(Input.GetKeyDown(KeyCode.Alpha9)) s_spawnInput += "9";
             }
-        }
-
-
-        public static void Text_LanguagePatch(LanguageLine script, bool pauseTime)
-        {
-                Plugin.Logger.LogInfo($"Said Text: {script.text} | Pause: {pauseTime}");
         }
     }
 }
