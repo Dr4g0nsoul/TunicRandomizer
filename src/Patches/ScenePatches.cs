@@ -14,6 +14,17 @@ namespace TunicRandomizer.Patches
     public class ScenePatches
     {
 
+        //Current scene info
+        public static string s_currentSceneName = "";
+        public static int s_currentSceneId = -1;
+
+        //Chest item list to warp to
+        public static Queue<Transform> s_sceneItemList;
+
+        //Portal list spawn points to use
+        public static List<SpawnPoint> s_spawnPoints;
+
+
         public static void ApplyPatches(Harmony harmony)
         {
             MethodInfo sceneInfoUpdateOriginal = AccessTools.Method(typeof(SceneLoader), "OnSceneLoaded");
@@ -24,29 +35,47 @@ namespace TunicRandomizer.Patches
         public static void OnSceneLoaded_SceneLoader_ScenePatches(Scene loadingScene, LoadSceneMode mode)
         {
 
-            Plugin.s_currentSceneName = loadingScene.name;
-            Plugin.s_currentSceneId = loadingScene.buildIndex;
+            s_currentSceneName = loadingScene.name;
+            s_currentSceneId = loadingScene.buildIndex;
 
-            if(Plugin.s_spawnPoints == null) Plugin.s_spawnPoints = new List<SpawnPoint>();
-            else Plugin.s_spawnPoints.Clear();
+            if(s_spawnPoints == null) s_spawnPoints = new List<SpawnPoint>();
+            else s_spawnPoints.Clear();
 
             Plugin.Logger.LogInfo("------------ SPAWN POINTS ------------");
+            AreaStore newArea = new AreaStore();
+            newArea.sceneName = s_currentSceneName;
+            newArea.areaExits = new List<AreaStore.AreaExit>();
+
             foreach (ScenePortal scenePortal in GameObject.FindObjectsOfType<ScenePortal>())
             {
-                Plugin.Logger.LogInfo($"Added Spawn {Plugin.s_spawnPoints.Count}: {scenePortal.name} to {scenePortal.destinationSceneName} at {scenePortal.FullID} | {scenePortal.optionalIDToSpawnAt}");
+                Plugin.Logger.LogInfo($"Added Spawn {s_spawnPoints.Count}: {scenePortal.name} to {scenePortal.destinationSceneName} at {scenePortal.FullID} | {scenePortal.optionalIDToSpawnAt}");
                 SpawnPoint spawn = new SpawnPoint(scenePortal.destinationSceneName, scenePortal.FullID, scenePortal.playerSpawnTransform.position);
-                Plugin.s_spawnPoints.Add(spawn);
+                s_spawnPoints.Add(spawn);
+
+                AreaStore.AreaExit newExit = new();
+                newExit.destinationSceneName = scenePortal.destinationSceneName;
+                newExit.destinationLocation = scenePortal.optionalIDToSpawnAt;
+                newArea.areaExits.Add(newExit);
 
 
                 ExportItemsUtils.s_scenesToVisit.Enqueue(spawn);
             }
+
+            if (ExportItemsUtils.s_areaStoresAdded == null) ExportItemsUtils.s_areaStoresAdded = new();
+            if (!ExportItemsUtils.s_areaStoresAdded.Contains(s_currentSceneName))
+            {
+                if (ExportItemsUtils.s_areaStores == null) ExportItemsUtils.s_areaStores = new();
+                ExportItemsUtils.s_areaStores.Add(newArea);
+                ExportItemsUtils.s_areaStoresAdded.Add(s_currentSceneName);
+            }
+
             Plugin.Logger.LogInfo("------------ SPAWN POINTS END ------------");
 
             Plugin.Logger.LogInfo("------------ CHESTS ------------");
             
             bool first = true;
-            if (Plugin.s_sceneItemList == null) Plugin.s_sceneItemList = new Queue<Transform>();
-            else Plugin.s_sceneItemList.Clear();
+            if (s_sceneItemList == null) s_sceneItemList = new Queue<Transform>();
+            else s_sceneItemList.Clear();
             foreach (Chest chest in GameObject.FindObjectsOfType<Chest>())
             {
                 if (!first) Plugin.Logger.LogInfo("-------------------------------");
@@ -79,25 +108,25 @@ namespace TunicRandomizer.Patches
             Plugin.Logger.LogInfo("------------ PICKUP ITEMS END ------------");
 
 
-            //ExportItemsUtils.TraverseNextScene(); UNCOMMENT TO EXCECUTE ITEM EXPORT WHEN STARTING A NEW GAME
+            //ExportItemsUtils.TraverseNextScene(); // UNCOMMENT TO EXCECUTE ITEM EXPORT WHEN STARTING A NEW GAME
         }
 
         private static void AddChestToFoundChests(Chest chest)
         {
             Plugin.Logger.LogInfo($"Chest {chest.name} ({chest.GetInstanceID()}): ");
             
-            Plugin.s_sceneItemList.Enqueue(chest.characterOpeningTransform);
+            s_sceneItemList.Enqueue(chest.characterOpeningTransform);
 
             // Convert into Chest item Store
             RandomItemStore chestItemStore = RandomItemStore.ChestToRandomItemStore(chest);
 
             // Add chest to store for output
-            if (Plugin.s_itemStoresAdded == null) Plugin.s_itemStoresAdded = new List<string>();
-            if (!Plugin.s_itemStoresAdded.Contains(chestItemStore.instanceId))
+            if (ExportItemsUtils.s_itemStoresAdded == null) ExportItemsUtils.s_itemStoresAdded = new List<string>();
+            if (!ExportItemsUtils.s_itemStoresAdded.Contains(chestItemStore.instanceId))
             {
-                Plugin.s_itemStoresAdded.Add(chestItemStore.instanceId);
-                if (Plugin.s_itemStores == null) Plugin.s_itemStores = new List<RandomItemStore>();
-                Plugin.s_itemStores.Add(chestItemStore);
+                ExportItemsUtils.s_itemStoresAdded.Add(chestItemStore.instanceId);
+                if (ExportItemsUtils.s_itemStores == null) ExportItemsUtils.s_itemStores = new List<RandomItemStore>();
+                ExportItemsUtils.s_itemStores.Add(chestItemStore);
             }
 
         }
@@ -106,18 +135,18 @@ namespace TunicRandomizer.Patches
         {
             Plugin.Logger.LogInfo($"Pickup item {item.itemToGive.name} ({item.itemToGive.Type}) x {item.QuantityToGive}");
 
-            Plugin.s_sceneItemList.Enqueue(item.transform);
+            s_sceneItemList.Enqueue(item.transform);
 
             // Convert into Chest item Store
             RandomItemStore pickupItemStore = RandomItemStore.PickupItemToRandomItemStore(item);
 
             // Add chest to store for output
-            if (Plugin.s_itemStoresAdded == null) Plugin.s_itemStoresAdded = new List<string>();
-            if (!Plugin.s_itemStoresAdded.Contains(pickupItemStore.instanceId))
+            if (ExportItemsUtils.s_itemStoresAdded == null) ExportItemsUtils.s_itemStoresAdded = new List<string>();
+            if (!ExportItemsUtils.s_itemStoresAdded.Contains(pickupItemStore.instanceId))
             {
-                Plugin.s_itemStoresAdded.Add(pickupItemStore.instanceId);
-                if (Plugin.s_itemStores == null) Plugin.s_itemStores = new List<RandomItemStore>();
-                Plugin.s_itemStores.Add(pickupItemStore);
+                ExportItemsUtils.s_itemStoresAdded.Add(pickupItemStore.instanceId);
+                if (ExportItemsUtils.s_itemStores == null) ExportItemsUtils.s_itemStores = new List<RandomItemStore>();
+                ExportItemsUtils.s_itemStores.Add(pickupItemStore);
             }
 
         }
@@ -126,7 +155,7 @@ namespace TunicRandomizer.Patches
         {
             string closest = "";
             float closestDistance = 999999f;
-            foreach(SpawnPoint spawnPoint in Plugin.s_spawnPoints)
+            foreach(SpawnPoint spawnPoint in s_spawnPoints)
             {
                 float currDistance = Vector3.Distance(itemPos, spawnPoint.position);
                 if(currDistance < closestDistance)

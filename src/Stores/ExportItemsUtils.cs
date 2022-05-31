@@ -10,6 +10,15 @@ namespace TunicRandomizer.Stores
     public class ExportItemsUtils
     {
 
+        //Item store to export
+        public static List<RandomItemStore> s_itemStores;
+        public static List<string> s_itemStoresAdded;
+
+        //Location store to export
+        public static List<AreaStore> s_areaStores;
+        public static List<string> s_areaStoresAdded;
+
+        //Scenes to visit
         public static List<string> s_visited_scenes = new();
         public static Queue<ScenePatches.SpawnPoint> s_scenesToVisit = new ();
 
@@ -23,10 +32,16 @@ namespace TunicRandomizer.Stores
             //    s_itemStores.Add(ChestItemStore.ChestToChestItemStore(chest));
             //}
 
-            string json = Plugin.s_itemStores.ToJson();
-            Plugin.Logger.LogInfo("-----------------------EXPORT---------------------");
-            Plugin.Logger.LogInfo(json);
-            Plugin.Logger.LogInfo("-----------------------EXPORT END---------------------");
+            Plugin.Logger.LogInfo("-----------------------  EXPORT  ---------------------");
+            Plugin.Logger.LogInfo("---------------------  EXPORT ITEMS  ---------------------");
+            string jsonItems = s_itemStores.ToJson();
+            Plugin.Logger.LogInfo(jsonItems);
+            Plugin.Logger.LogInfo("-------------------  EXPORT ITEMS END  ---------------------");
+            Plugin.Logger.LogInfo("---------------------  EXPORT AREAS  ---------------------");
+            string jsonAreas = s_areaStores.ToJson();
+            Plugin.Logger.LogInfo(jsonAreas);
+            Plugin.Logger.LogInfo("-------------------  EXPORT AREAS END  ---------------------");
+            Plugin.Logger.LogInfo("---------------------  EXPORT END  -------------------");
 
         }
 

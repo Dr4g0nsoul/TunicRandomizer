@@ -46,8 +46,8 @@ namespace TunicRandomizer.Patches
         {
             if (false && Input.GetKeyDown(KeyCode.O)) //Disable warp to chest functionality for now
             {
-                if (Plugin.s_sceneItemList == null) Plugin.s_sceneItemList = new Queue<Transform>();
-                Transform warpItemTransform = Plugin.s_sceneItemList.Dequeue();
+                if (ScenePatches.s_sceneItemList == null) ScenePatches.s_sceneItemList = new Queue<Transform>();
+                Transform warpItemTransform = ScenePatches.s_sceneItemList.Dequeue();
                 __instance.transform.position = warpItemTransform.position;
             }
             else if (Input.GetKeyDown(KeyCode.I))
@@ -78,9 +78,9 @@ namespace TunicRandomizer.Patches
                     int warpIndex;
                     if (Int32.TryParse(s_spawnInput, out warpIndex))
                     {
-                        if (warpIndex >= 0 && warpIndex < Plugin.s_spawnPoints.Count)
+                        if (warpIndex >= 0 && warpIndex < ScenePatches.s_spawnPoints.Count)
                         {
-                            warpPoint = Plugin.s_spawnPoints[warpIndex];
+                            warpPoint = ScenePatches.s_spawnPoints[warpIndex];
                         }
                     }
                     if (warpPoint != null)

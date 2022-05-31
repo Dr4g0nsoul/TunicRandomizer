@@ -11,6 +11,21 @@ namespace TunicRandomizer.Stores
     public class RandomItemStore
     {
 
+        public static readonly string[] gearThatCountsAsEquipment = new string[]
+        {
+            "Hyperdash",
+            "Lantern",
+            "Shield"
+        };
+        public static readonly string gearThatCountsAsHexagonsNameContains = "Hexagon";
+        public static readonly string missingHexagonName = "Hexagon Blue";
+        public static readonly string gearThatCountsAsKeyNameContains = "Key";
+        public static readonly string gearThatCountsAsTrophiesNameContains = "GoldenTrophy";
+        public static readonly string emptyChestNameContains = "(empty)";
+
+        private static int s_nextNumericId = 1;
+
+        public int numericId;
         public string instanceId;
         public string itemName;
         public int itemQuantity;
@@ -22,7 +37,6 @@ namespace TunicRandomizer.Stores
         public string itemContainerName;
         public Vector3 itemContainerPosition;
         public int moneyQuantity;
-        public string[] needsItems;
 
         public RandomItemStore(
             string instanceId, 
@@ -49,35 +63,8 @@ namespace TunicRandomizer.Stores
             this.itemContainerName = itemContainerName;
             this.itemContainerPosition = itemContainerPosition;
             this.moneyQuantity = moneyQuantity;
-        }
-
-        public RandomItemStore(
-            string instanceId,
-            string itemName,
-            int itemQuantity,
-            string itemType,
-            int sceneId,
-            string sceneName,
-            string itemNearestExit,
-            int chestId,
-            string itemContainerName,
-            Vector3 itemContainerPosition,
-            int moneyQuantity,
-            string[] needsItems
-        )
-        {
-            this.instanceId = instanceId;
-            this.itemName = itemName;
-            this.itemQuantity = itemQuantity;
-            this.itemType = itemType;
-            this.sceneId = sceneId;
-            this.sceneName = sceneName;
-            this.itemNearestExit = itemNearestExit;
-            this.chestId = chestId;
-            this.itemContainerName = itemContainerName;
-            this.itemContainerPosition = itemContainerPosition;
-            this.moneyQuantity = moneyQuantity;
-            this.needsItems = needsItems;
+            numericId = s_nextNumericId;
+            s_nextNumericId++;
         }
 
         public static RandomItemStore ChestToRandomItemStore(Chest chest)
@@ -120,39 +107,66 @@ namespace TunicRandomizer.Stores
             {
                 uniqueId += chest.chestID;
             }
-            uniqueId += $"_{Plugin.s_currentSceneId}_{Math.Abs((int)chest.transform.position.x)}_{Math.Abs((int)chest.transform.position.y)}_{Math.Abs((int)chest.transform.position.z)}";
+            uniqueId += $"_{ScenePatches.s_currentSceneId}_{Math.Abs((int)chest.transform.position.x)}_{Math.Abs((int)chest.transform.position.y)}_{Math.Abs((int)chest.transform.position.z)}";
 
-            return new RandomItemStore(
+            RandomItemStore newItemStore = new RandomItemStore(
                 uniqueId,
                 chest.isFairy ? "Fairy" : item?.name,
                 chest.isFairy ? 0 : quantity,
-                chest.isFairy ? "FAIRY" : (money > 0 ? "MONEY" : (item != null ? item.Type.ToString() : "NONE/OTHER/MONEY")),
-                Plugin.s_currentSceneId,
-                Plugin.s_currentSceneName,
+                chest.isFairy ? "FAIRY" : (money > 0 ? "MONEY" : (item != null ? item.Type.ToString() : "OTHER")),
+                ScenePatches.s_currentSceneId,
+                ScenePatches.s_currentSceneName,
                 ScenePatches.GetItemNearestExit(chest.transform.position),
                 chest.chestID,
                 chest.name,
                 chest.characterOpeningTransform.position,
                 chest.isFairy ? 0 : money
             );
+
+            return CheckCategoryException(newItemStore);
         }
 
         public static RandomItemStore PickupItemToRandomItemStore(ItemPickup item)
         {
-            string uniqueId = $"i_{Plugin.s_currentSceneId}_{Math.Abs((int)item.transform.position.x)}_{Math.Abs((int)item.transform.position.y)}_{Math.Abs((int)item.transform.position.z)}";
-            return new RandomItemStore(
+            string uniqueId = $"i_{ScenePatches.s_currentSceneId}_{Math.Abs((int)item.transform.position.x)}_{Math.Abs((int)item.transform.position.y)}_{Math.Abs((int)item.transform.position.z)}";
+            RandomItemStore newItemStore = new RandomItemStore(
                 uniqueId,
                 item.itemToGive.name,
                 item.QuantityToGive,
                 item.itemToGive.Type.ToString(),
-                Plugin.s_currentSceneId,
-                Plugin.s_currentSceneName,
+                ScenePatches.s_currentSceneId,
+                ScenePatches.s_currentSceneName,
                 ScenePatches.GetItemNearestExit(item.transform.position),
                 -1,
                 item.name,
                 item.transform.position,
                 0
             );
+            return CheckCategoryException(newItemStore);
+        }
+
+        private static RandomItemStore CheckCategoryException(RandomItemStore newItemStore)
+        {
+            if (newItemStore.itemName != null)
+            {
+                if (newItemStore.itemName.Contains(gearThatCountsAsHexagonsNameContains))
+                {
+                    newItemStore.itemType = "HEXAGON";
+                }
+                else if (newItemStore.itemName.Contains(gearThatCountsAsKeyNameContains))
+                {
+                    newItemStore.itemType = "KEY";
+                }
+                else if (newItemStore.itemName.Contains(gearThatCountsAsTrophiesNameContains))
+                {
+                    newItemStore.itemType = "TROPHY";
+                }
+                else if (newItemStore.itemName.Contains(emptyChestNameContains))
+                {
+                    newItemStore.itemType = "EMPTY";
+                }
+            }
+            return newItemStore;
         }
     }
 }
