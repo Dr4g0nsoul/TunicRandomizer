@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using TunicRandomizer;
-using TunicRandomizer.Randomizer;
+//using TunicRandomizer.Randomizer;
 using TunicRandomizer.Stores;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -79,12 +79,6 @@ namespace TunicRandomizer.Patches
             foreach (Chest chest in GameObject.FindObjectsOfType<Chest>())
             {
                 if (!first) Plugin.Logger.LogInfo("-------------------------------");
-                else if(Plugin.randomizer == null || !Plugin.randomizer.IsRandomized)
-                {
-                    Plugin.randomizer = new ItemRandomizer();
-                    Plugin.randomizer.Randomize();
-                }
-
                 first = false;
                 AddChestToFoundChests(chest);
             }
@@ -96,11 +90,6 @@ namespace TunicRandomizer.Patches
             foreach (ItemPickup itemPickup in GameObject.FindObjectsOfType<ItemPickup>())
             {
                 if (!first) Plugin.Logger.LogInfo("-------------------------------");
-                else if (Plugin.randomizer == null || !Plugin.randomizer.IsRandomized)
-                {
-                    Plugin.randomizer = new ItemRandomizer();
-                    Plugin.randomizer.Randomize();
-                }
 
                 first = false;
                 AddPickupItemToFoundItems(itemPickup);

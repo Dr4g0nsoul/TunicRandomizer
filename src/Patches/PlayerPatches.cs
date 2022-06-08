@@ -102,7 +102,7 @@ namespace TunicRandomizer.Patches
             else if (Input.GetKeyDown(KeyCode.T))
             {
                 LanguageLine showSeed = ScriptableObject.CreateInstance<LanguageLine>();
-                showSeed.text = $"\"Seed: {Plugin.randomizer.Seed}\"";
+                showSeed.text = $"\"Seed: {TunicArchipelago.TunicArchipelagoClient.Seed}\"";
                 NPCDialogue.DisplayDialogue(showSeed, false);
             }
             else if(Input.GetKeyDown(KeyCode.N))

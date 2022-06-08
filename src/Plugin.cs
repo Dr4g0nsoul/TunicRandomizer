@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using TinyJson;
 using TunicRandomizer.Patches;
-using TunicRandomizer.Randomizer;
 using TunicRandomizer.Stores;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -18,13 +17,6 @@ namespace TunicRandomizer
     {
 
         public static ManualLogSource Logger;
-
-        
-
-
-        //Item Randomizer reference
-        //INFO: For now the randomizer starts when the first chest is loaded into a scene, to get randomness depending on when you press new game
-        public static ItemRandomizer randomizer;
 
         public override void Load()
         {
@@ -38,6 +30,7 @@ namespace TunicRandomizer
             ItemPatches.ApplyPatches(harmony);
             ScenePatches.ApplyPatches(harmony);
             MenuPatches.ApplyPatches(harmony);
+
         }
     }
 }

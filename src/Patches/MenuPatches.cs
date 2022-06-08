@@ -5,45 +5,60 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
+using TunicRandomizer.TunicArchipelago;
 
 namespace TunicRandomizer.Patches
 {
     public class MenuPatches
     {
 
-        public static RandomizerSettings randomizerSettings;
+        //public static RandomizerSettings randomizerSettings;
+        private static Char[] s_azList = new Char[] { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z' };
 
         private static bool showRandomizerOptions = false;
+        private static bool allowNewGame = false;
+        private static TitleScreen titleScreen;
 
-        private static OptionsGUIButton seedButton = null;
+        private static OptionsGUIButton hostButton = null;
+        private static OptionsGUIButton portButton = null;
+        private static OptionsGUIButton userButton = null;
+        private static OptionsGUIButton passwordButton = null;
 
         public static void ApplyPatches(Harmony harmony)
         {
-            //// MAIN MENU PATCHES
-            //MethodInfo originalNewGame = AccessTools.Method(typeof(TitleScreen), "__NewGame");
-            //MethodInfo patchedNewGame = AccessTools.Method(typeof(MenuPatches), "__NewGame_MenuPatch");
-            //harmony.Patch(originalNewGame, new HarmonyMethod(patchedNewGame));
+            // MAIN MENU PATCHES
+            MethodInfo originalNewGame = AccessTools.Method(typeof(TitleScreen), "__NewGame");
+            MethodInfo patchedNewGame = AccessTools.Method(typeof(MenuPatches), "__NewGame_MenuPatch");
+            harmony.Patch(originalNewGame, new HarmonyMethod(patchedNewGame));
 
-            //MethodInfo originalOptions = AccessTools.Method(typeof(TitleScreen), "__Options");
-            //MethodInfo patchedOptions = AccessTools.Method(typeof(MenuPatches), "__Options_MenuPatch");
-            //harmony.Patch(originalOptions, new HarmonyMethod(patchedOptions));
+            MethodInfo originalOptions = AccessTools.Method(typeof(TitleScreen), "__Options");
+            MethodInfo patchedOptions = AccessTools.Method(typeof(MenuPatches), "__Options_MenuPatch");
+            harmony.Patch(originalOptions, new HarmonyMethod(patchedOptions));
 
-            ////OPTION MENU PATHES
-            //MethodInfo originalAddButtons = AccessTools.Method(typeof(OptionsGUI), "pushDefault");
-            //MethodInfo patchedAddButtons = AccessTools.Method(typeof(MenuPatches), "pushDefault_OptionsPatch");
-            //harmony.Patch(originalAddButtons, null, new HarmonyMethod(patchedAddButtons));
+            //OPTION MENU PATHES
+            MethodInfo originalAddButtons = AccessTools.Method(typeof(OptionsGUI), "pushDefault");
+            MethodInfo patchedAddButtons = AccessTools.Method(typeof(MenuPatches), "pushDefault_OptionsPatch");
+            harmony.Patch(originalAddButtons, null, new HarmonyMethod(patchedAddButtons));
 
-            //MethodInfo originalOptionsUpdate = AccessTools.Method(typeof(OptionsGUI), "Update");
-            //MethodInfo patchedOptionsUpdate = AccessTools.Method(typeof(MenuPatches), "Update_OptionsPatch");
-            //harmony.Patch(originalOptionsUpdate, new HarmonyMethod(patchedOptionsUpdate));
+            MethodInfo originalOptionsUpdate = AccessTools.Method(typeof(OptionsGUI), "Update");
+            MethodInfo patchedOptionsUpdate = AccessTools.Method(typeof(MenuPatches), "Update_OptionsPatch");
+            harmony.Patch(originalOptionsUpdate, new HarmonyMethod(patchedOptionsUpdate));
         }
 
         public static bool __NewGame_MenuPatch(TitleScreen __instance)
         {
-            showRandomizerOptions = true;
-            if(randomizerSettings == null) randomizerSettings = new RandomizerSettings();
-            __instance.__Options();
-            return false;
+            if(!allowNewGame)
+            {
+                titleScreen = __instance;
+                showRandomizerOptions = true;
+                __instance.__Options();
+                Plugin.Logger.LogInfo("GOTO randomizer options");
+                return false;
+            }
+            Plugin.Logger.LogInfo("GOTO new game");
+            __instance.gameObject.SetActive(true);
+            __instance.lockout = false;
+            return true;
         }
 
         public static bool __Options_MenuPatch(TitleScreen __instance)
@@ -58,155 +73,127 @@ namespace TunicRandomizer.Patches
                 __instance.clearPage();
                 __instance.setHeading("Randomizer settings");
 
-                Il2CppSystem.Action startStandardAction = new Action(StartStandard);
-                __instance.addButton("Start new game", true, startStandardAction);
+                __instance.addButton("Start new game", true, new Action(() =>
+                {
+                    __instance.exitOptions();
+                    allowNewGame = true;
+                    titleScreen.__NewGame();
+                }));
 
+                Il2CppSystem.Action doNothingAction = new Action(DoNothing);
+                hostButton = __instance.addButton("Host", "localhost", doNothingAction);
+                portButton = __instance.addButton("Port", "1234", doNothingAction);
+                userButton = __instance.addButton("User", "Player", doNothingAction);
+                passwordButton = __instance.addButton("Password", "", doNothingAction);
 
+                __instance.addButton("Start randomized game", new Action(() =>
+                {
+                    if(TunicArchipelagoClient.Connect(
+                        hostButton.secondaryText.text,
+                        int.Parse(portButton.secondaryText.text),
+                        userButton.secondaryText.text,
+                        passwordButton.secondaryText.text))
+                    {
+                        __instance.exitOptions();
+                        allowNewGame = true;
+                        titleScreen.__NewGame();
+                    }
+                }));
 
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizerAction = new Action<int>((enabled) => randomizerSettings.randomizerEnabled = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", 0, toggleRandomizerAction);
-
-                randomizerSettings.seed = Environment.TickCount;
-                Il2CppSystem.Action changeSeedAction = new Action(ChangeSeed);
-                seedButton = __instance.addButton("Seed", randomizerSettings.seed + "", changeSeedAction);
-
-
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeEquipmentAction = new Action<int>((enabled) => randomizerSettings.randomizeEquipment = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeEquipment ? 1 : 0, toggleRandomizerAction);
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeConsumablesAction = new Action<int>((enabled) => randomizerSettings.randomizeConsumables = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeConsumables ? 1 : 0, toggleRandomizeConsumablesAction);
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeFlaskContainersAndShardsAction = new Action<int>((enabled) => randomizerSettings.randomizeFlaskContainersAndShards = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeFlaskContainersAndShards ? 1 : 0, toggleRandomizeFlaskContainersAndShardsAction);
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeOfferingsAction = new Action<int>((enabled) => randomizerSettings.randomizeOfferings = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeOfferings ? 1 : 0, toggleRandomizeOfferingsAction);
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeMoneyAction = new Action<int>((enabled) => randomizerSettings.randomizeMoney = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeMoney ? 1 : 0, toggleRandomizeMoneyAction);
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeEquipmentSlotsAction = new Action<int>((enabled) => randomizerSettings.randomizeEquipmentSlots = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeEquipmentSlots ? 1 : 0, toggleRandomizeEquipmentSlotsAction);
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeHexagonsAction = new Action<int>((enabled) => randomizerSettings.randomizeHexagons = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeHexagons ? 1 : 0, toggleRandomizeHexagonsAction);
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeFairiesAction = new Action<int>((enabled) => randomizerSettings.randomizeFairies = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeFairies ? 1 : 0, toggleRandomizeFairiesAction);
-
-                OptionsGUIMultiSelect.MultiSelectAction toggleRandomizeTrophiesAction = new Action<int>((enabled) => randomizerSettings.randomizeTrophies = enabled == 1 ? true : false);
-                __instance.addToggle("Enable Randomizer", "Disabled", "Enabled", randomizerSettings.randomizeTrophies ? 1 : 0, toggleRandomizeTrophiesAction);
             }
         }
 
         public static void Update_OptionsPatch()
         {
-            if(seedButton.button.currentSelectionState == UnityEngine.UI.Selectable.SelectionState.Selected)
+            OptionsGUIButton currSelectedButton = null;
+            if(hostButton.button.currentSelectionState == UnityEngine.UI.Selectable.SelectionState.Selected)
             {
-                if (seedButton.secondaryText.text.Length < 10)
-                {
-                    if (seedButton.secondaryText.text.Length > 0 && (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0)))
-                    {
-                        seedButton.secondaryText.text += "0";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
-                    {
-                        seedButton.secondaryText.text += "1";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
-                    {
-                        seedButton.secondaryText.text += "2";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
-                    {
-                        seedButton.secondaryText.text += "3";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4))
-                    {
-                        seedButton.secondaryText.text += "4";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5))
-                    {
-                        seedButton.secondaryText.text += "5";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha6) || Input.GetKeyDown(KeyCode.Keypad6))
-                    {
-                        seedButton.secondaryText.text += "6";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha7) || Input.GetKeyDown(KeyCode.Keypad7))
-                    {
-                        seedButton.secondaryText.text += "7";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha8) || Input.GetKeyDown(KeyCode.Keypad8))
-                    {
-                        seedButton.secondaryText.text += "8";
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Alpha9) || Input.GetKeyDown(KeyCode.Keypad9))
-                    {
-                        seedButton.secondaryText.text += "9";
-                    }
-                }
-                if (Input.GetKeyDown(KeyCode.KeypadEnter))
-                {
-                    if (seedButton.secondaryText.text.Length > 0)
-                    {
-                        randomizerSettings.seed = int.Parse(seedButton.secondaryText.text);
-                    }
-                    else
-                    {
-                        seedButton.secondaryText.text = randomizerSettings.seed+"";
-                    }
-                }
-                else if(Input.GetKeyDown(KeyCode.Backspace) && seedButton.secondaryText.text.Length > 0)
-                {
-                    seedButton.secondaryText.text = seedButton.secondaryText.text.Remove(seedButton.secondaryText.text.Length - 1);
-                }
+                currSelectedButton = hostButton;
             }
-            else if (seedButton.secondaryText.text.Length < 1)
+            else if(portButton.button.currentSelectionState == UnityEngine.UI.Selectable.SelectionState.Selected)
             {
-                randomizerSettings.seed = Environment.TickCount;
-                seedButton.secondaryText.text = randomizerSettings.seed+"";
-            } 
-            else if (seedButton.secondaryText.text != (randomizerSettings.seed + ""))
+                currSelectedButton = portButton;
+            }
+            else if (userButton.button.currentSelectionState == UnityEngine.UI.Selectable.SelectionState.Selected)
             {
-                randomizerSettings.seed = int.Parse(seedButton.secondaryText.text);
+                currSelectedButton = userButton;
+            }
+            else if (passwordButton.button.currentSelectionState == UnityEngine.UI.Selectable.SelectionState.Selected)
+            {
+                currSelectedButton = passwordButton;
+            }
+            if (currSelectedButton != null)
+            {
+                //Numbers 0 through 9: 48 - 57
+                for(int i = 48; i < 58; i++)
+                {
+                    if(Input.GetKeyDown((KeyCode)i))
+                    {
+                        currSelectedButton.secondaryText.text += (i - 48);
+                    }
+                }
+                //Keypad Numbers 0 through 9: 256 - 265
+                for (int i = 256; i < 266; i++)
+                {
+                    if (Input.GetKeyDown((KeyCode)i))
+                    {
+                        currSelectedButton.secondaryText.text += (i - 256);
+                    }
+                }
+
+                //Text Keys A through Z: 97 - 122
+                bool isUppercase = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                for (int i = 97; i < 123; i++)
+                {
+                    if (Input.GetKeyDown((KeyCode)i))
+                    {
+                        if(isUppercase)
+                        {
+                            currSelectedButton.secondaryText.text += Char.ToUpper(s_azList[i - 97]);
+                        }
+                        else
+                        {
+                            currSelectedButton.secondaryText.text += s_azList[i - 97];
+                        }
+                    }
+                }
+                if (Input.GetKeyDown(KeyCode.Delete))
+                {
+                    currSelectedButton.secondaryText.text = "";
+                }
+                else if(Input.GetKeyDown(KeyCode.Backspace) && currSelectedButton.secondaryText.text.Length > 0)
+                {
+                    currSelectedButton.secondaryText.text = currSelectedButton.secondaryText.text.Remove(currSelectedButton.secondaryText.text.Length - 1);
+                }
             }
         }
 
-
-        private static void StartStandard()
-        {
-
-        }
-
-        private static void ChangeSeed()
+        private static void DoNothing()
         {
         }
 
-        public class RandomizerSettings
-        {
-            public bool randomizerEnabled = false;
-            public int seed = 0;
+        //public class RandomizerSettings
+        //{
+        //    public bool randomizerEnabled = false;
+        //    public int seed = 0;
             
-            //Randomization pool
-            public bool randomizeEquipment = true;
-            public bool randomizeConsumables = true; //Supplies
-            public bool randomizeFlaskContainersAndShards = true;
-            public bool randomizeOfferings = true;
-            public bool randomizeMoney = true;
-            public bool randomizeEquipmentSlots = true;
-            public bool randomizeHexagons = false;
-            public bool randomizeFairies = false;
-            public bool randomizeTrophies = false;
+        //    //Randomization pool
+        //    public bool randomizeEquipment = true;
+        //    public bool randomizeConsumables = true; //Supplies
+        //    public bool randomizeFlaskContainersAndShards = true;
+        //    public bool randomizeOfferings = true;
+        //    public bool randomizeMoney = true;
+        //    public bool randomizeEquipmentSlots = true;
+        //    public bool randomizeHexagons = false;
+        //    public bool randomizeFairies = false;
+        //    public bool randomizeTrophies = false;
 
-            //Additional randomization features
-            public bool ensureEquipmentInEquipmentLocation = true;
-            public bool progressiveStickToSword = true;
-            public bool bushesOnlyDestructableBySword = true; //will probably deafault to false later
+        //    //Additional randomization features
+        //    public bool ensureEquipmentInEquipmentLocation = true;
+        //    public bool progressiveStickToSword = true;
+        //    public bool bushesOnlyDestructableBySword = true; //will probably deafault to false later
 
 
-        }
+        //}
     }
 }

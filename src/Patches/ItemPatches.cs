@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using TunicRandomizer;
+using TunicRandomizer.TunicArchipelago;
 using TunicRandomizer.Stores;
 using UnityEngine;
 
@@ -16,8 +16,9 @@ namespace TunicRandomizer.Patches
     {
 
         public static int s_fairiesFound = 0;
-        public static RandomItemStore s_nextRandomChest = null;
+        public static TunicArchipelagoClient.TunicArchipelagoItem s_nextRandomItem = null;
         public static bool s_isOriginalFairyChest = false;
+        public static bool s_isOpeningChest = false;
 
         public static void ApplyPatches(Harmony harmony)
         {
@@ -55,12 +56,13 @@ namespace TunicRandomizer.Patches
             MethodInfo originalPickupItem = AccessTools.Method(typeof(ItemPickup), "onGetIt");
             MethodInfo patchedPickupItem = AccessTools.Method(typeof(ItemPatches), "onGetIt_ItemPickupPatch");
             harmony.Patch(originalPickupItem, new HarmonyMethod(patchedPickupItem));
+
         }
 
         public static bool IInteractionReceiver_Interact_ChestPatch(Item i, Chest __instance)
         {
             s_isOriginalFairyChest = false;
-            s_nextRandomChest = null;
+            s_nextRandomItem = null;
             // ORIGINAL ITEM
             Item item = null;
             int money = 0;
@@ -97,8 +99,18 @@ namespace TunicRandomizer.Patches
 
             //Plugin.s_openedChests.Add(__instance.chestID); not needed anymore
             RandomItemStore originalItem = RandomItemStore.ChestToRandomItemStore(__instance);
+            if(TunicArchipelagoClient.IsConnected)
+            {
+                s_isOpeningChest = true;
+                TunicArchipelagoClient.CheckLocation(originalItem);
+            }
+            else
+            {
+                s_nextRandomItem = null;
+            }
 
             //RANDOMIZED ITEM
+            /*
             RandomItemStore randomChestItem = Plugin.randomizer.GetRandomizedItem(originalItem.instanceId, __instance);
             s_nextRandomChest = randomChestItem;
 
@@ -124,6 +136,7 @@ namespace TunicRandomizer.Patches
             {
                 Plugin.Logger.LogError($"Unhandled randomization for original chest: {__instance.name} ({originalItem.instanceId}). Random Item {randomChestItem.itemContainerName} ({randomChestItem.instanceId}) {randomChestItem.itemType}");
             }
+            */
 
             return true;
 
@@ -152,11 +165,11 @@ namespace TunicRandomizer.Patches
 
         public static bool moneySprayQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
         {
-            if (s_nextRandomChest == null) return true;
+            if (s_nextRandomItem == null) return true;
 
-            if (s_nextRandomChest.itemType == "MONEY")
+            if (s_nextRandomItem.itemType == TunicArchipelagoClient.TunicArchipelagoItemType.Money)
             {
-                __result = s_nextRandomChest.moneyQuantity;
+                __result = s_nextRandomItem.quantity;
             }
 
             return false;
@@ -164,19 +177,19 @@ namespace TunicRandomizer.Patches
 
         public static bool itemContentsfromDatabase_ChestPatch(Chest __instance, ref Item __result)
         {
-            if (s_nextRandomChest == null) return true;
+            if (s_nextRandomItem == null) return true;
 
             __result = null;
 
-            if (s_nextRandomChest.itemName != null)
+            if (s_nextRandomItem.itemName != null)
             {
                 // HANDLE TRINKETS
-                if (s_nextRandomChest.itemType == Item.ItemType.TRINKETS.ToString())
+                if (s_nextRandomItem.itemType == TunicArchipelagoClient.TunicArchipelagoItemType.Trinket)
                 {
                     TrinketItem newItem = null;
                     foreach (TrinketItem trinketItem in Resources.FindObjectsOfTypeAll<TrinketItem>())
                     {
-                        if (trinketItem.name == s_nextRandomChest.itemName)
+                        if (trinketItem.name == s_nextRandomItem.itemName)
                         {
                             newItem = trinketItem;
                             break;
@@ -185,7 +198,7 @@ namespace TunicRandomizer.Patches
 
                     if (newItem == null)
                     {
-                        Plugin.Logger.LogError($"Trinket item {s_nextRandomChest.itemName} not found in Assets");
+                        Plugin.Logger.LogError($"Trinket item {s_nextRandomItem.itemName} not found in Assets");
                     }
                     else
                     {
@@ -194,7 +207,7 @@ namespace TunicRandomizer.Patches
                 }
                 else // HANDLE OTHER ITEMS
                 {
-                    __result = Inventory.GetItemByName(s_nextRandomChest.itemName);
+                    __result = Inventory.GetItemByName(s_nextRandomItem.itemName);
                 }
             }
             return false;
@@ -202,9 +215,9 @@ namespace TunicRandomizer.Patches
 
         public static bool itemQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
         {
-            if (s_nextRandomChest == null) return true;
+            if (s_nextRandomItem == null) return true;
 
-            __result = s_nextRandomChest.itemQuantity;
+            __result = s_nextRandomItem.quantity;
             return false;
         }
 
@@ -215,17 +228,24 @@ namespace TunicRandomizer.Patches
 
         public static bool onGetIt_ItemPickupPatch(ItemPickup __instance)
         {
-            //Skip money pickups
-            if (__instance.itemToGive.Type == Item.ItemType.MONEY) return true;
+            if (TunicArchipelagoClient.IsConnected)
+            {
+                // ORIGINAL ITEM
+                RandomItemStore originalItem = RandomItemStore.PickupItemToRandomItemStore(__instance);
+                Plugin.Logger.LogInfo($"Original pickup item: {__instance.itemToGive.name} ({__instance.itemToGive.Type}) x {__instance.QuantityToGive}");
+                TunicArchipelagoClient.CheckLocation(originalItem);
+                __instance.pickupStateVar.BoolValue = true;
 
-            // ORIGINAL ITEM
-            RandomItemStore originalItem = RandomItemStore.PickupItemToRandomItemStore(__instance);
-            Plugin.Logger.LogInfo($"Original pickup item: {__instance.itemToGive.name} ({__instance.itemToGive.Type}) x {__instance.QuantityToGive}");
+                return false;
+            }
+            return true;
 
+        }
+
+        public static void AwardItemToPlayer(TunicArchipelagoClient.TunicArchipelagoItem archipelagoItem)
+        {
             //RANDOMIZED ITEM
-            RandomItemStore randomPickupItem = Plugin.randomizer.GetRandomizedItem(originalItem.instanceId, null, __instance);
-
-            if (randomPickupItem.itemType == "FAIRY")
+            if (archipelagoItem.itemType == TunicArchipelagoClient.TunicArchipelagoItemType.Fairy)
             {
                 LanguageLine fairyAcquiredText = ScriptableObject.CreateInstance<LanguageLine>();
                 fairyAcquiredText.text = $"\"Fairy Acquired\"";
@@ -234,24 +254,24 @@ namespace TunicRandomizer.Patches
                 Plugin.Logger.LogInfo($"Randomized item: Fairy");
                 s_fairiesFound += 1;
             }
-            else if (randomPickupItem.itemType == "MONEY")
+            else if (archipelagoItem.itemType == TunicArchipelagoClient.TunicArchipelagoItemType.Money)
             {
-                SmallMoneyItem.PlayerQuantity += randomPickupItem.moneyQuantity;
+                SmallMoneyItem.PlayerQuantity += archipelagoItem.quantity;
                 LanguageLine moneyEarnedText = ScriptableObject.CreateInstance<LanguageLine>();
-                moneyEarnedText.text = $"\"You get {randomPickupItem.moneyQuantity} $\"";
+                moneyEarnedText.text = $"\"You get {archipelagoItem.quantity} $\"";
                 NPCDialogue.DisplayDialogue(moneyEarnedText, true);
 
-                Plugin.Logger.LogInfo($"Randomized item: {randomPickupItem.moneyQuantity}$");
+                Plugin.Logger.LogInfo($"Randomized item: {archipelagoItem.quantity}$");
             }
-            else if (randomPickupItem.itemName != null)
+            else if (archipelagoItem.itemName != null)
             {
                 // HANDLE TRINKETS
-                if (randomPickupItem.itemType == Item.ItemType.TRINKETS.ToString())
+                if (archipelagoItem.itemType == TunicArchipelagoClient.TunicArchipelagoItemType.Trinket)
                 {
                     TrinketItem newItem = null;
                     foreach (TrinketItem trinketItem in Resources.FindObjectsOfTypeAll<TrinketItem>())
                     {
-                        if (trinketItem.name == randomPickupItem.itemName)
+                        if (trinketItem.name == archipelagoItem.itemName)
                         {
                             newItem = trinketItem;
                             break;
@@ -260,29 +280,25 @@ namespace TunicRandomizer.Patches
 
                     if (newItem == null)
                     {
-                        Plugin.Logger.LogError($"Trinket item {s_nextRandomChest.itemName} not found in Assets");
+                        Plugin.Logger.LogError($"Trinket item {s_nextRandomItem.itemName} not found in Assets");
                     }
 
                     newItem.Quantity += 1;
-                    ItemPresentation.PresentItem(newItem, randomPickupItem.itemQuantity);
+                    ItemPresentation.PresentItem(newItem, archipelagoItem.quantity);
                     newItem.UnlockAcquisitionAchievement();
                 }
                 else // HANDLE OTHER ITEMS
                 {
-                    Item newItem = Inventory.GetItemByName(randomPickupItem.itemName);
-                    newItem.Quantity += randomPickupItem.itemQuantity;
-                    ItemPresentation.PresentItem(newItem, randomPickupItem.itemQuantity);
+                    Item newItem = Inventory.GetItemByName(archipelagoItem.itemName);
+                    newItem.Quantity += archipelagoItem.quantity;
+                    ItemPresentation.PresentItem(newItem, archipelagoItem.quantity);
                 }
-                Plugin.Logger.LogInfo($"Randomized item: {randomPickupItem.itemName} ({randomPickupItem.itemType}) x {randomPickupItem.itemQuantity}");
+                Plugin.Logger.LogInfo($"Randomized item: {archipelagoItem.itemName} ({archipelagoItem.itemType}) x {archipelagoItem.quantity}");
             }
             else
             {
-                Plugin.Logger.LogError($"Unhandled randomization for original pickup item: {__instance.name} ({originalItem.instanceId}). Random Item {randomPickupItem.itemContainerName} ({randomPickupItem.instanceId}) {randomPickupItem.itemType}");
+                Plugin.Logger.LogError($"Unhandled randomization for original pickup item: {archipelagoItem.itemName} ({archipelagoItem.itemType}) [{archipelagoItem.archipelagoItemId}].");
             }
-
-            __instance.pickupStateVar.BoolValue = true;
-
-            return false;
         }
     }
 }
