@@ -9,6 +9,7 @@ using System.Text;
 using TunicRandomizer.TunicArchipelago;
 using TunicRandomizer.Stores;
 using UnityEngine;
+using System.Threading.Tasks;
 
 namespace TunicRandomizer.Patches
 {
@@ -16,26 +17,24 @@ namespace TunicRandomizer.Patches
     {
 
         public static int s_fairiesFound = 0;
-        public static TunicArchipelagoClient.TunicArchipelagoItem s_nextRandomItem = null;
         public static bool s_isOriginalFairyChest = false;
         public static bool s_isOpeningChest = false;
+
+        public static TunicArchipelagoClient.TunicArchipelagoItem s_nextArchipelagoItem = null;
+
+        private static bool s_chestOpeningFailed = false;
 
         public static void ApplyPatches(Harmony harmony)
         {
             /* ITEM RANDO PATCHES */
-            MethodInfo originalOpenChest = AccessTools.Method(typeof(Chest), "IInteractionReceiver_Interact");
-            MethodInfo patchedOpenChest = AccessTools.Method(typeof(ItemPatches), "IInteractionReceiver_Interact_ChestPatch");
+            MethodInfo originalOpenChest = AccessTools.Method(typeof(PlayerCharacter), "PlayOpenChestAnimation");
+            MethodInfo patchedOpenChest = AccessTools.Method(typeof(ItemPatches), "PlayOpenChestAnimation_PlayerPatch");
             harmony.Patch(originalOpenChest, new HarmonyMethod(patchedOpenChest));
 
-            /*
-            MethodInfo originalOpeningChest = AccessTools.PropertyGetter(typeof(Chest), "OnOpen");
-            MethodInfo patchedOpeningChest = AccessTools.Method(typeof(ItemPatches), "OnOpen_ChestPatch");
-            harmony.Patch(originalOpeningChest, new HarmonyMethod(patchedOpeningChest));
+            MethodInfo originalOpenChestInterrupt = AccessTools.Method(typeof(Chest), "InterruptOpening");
+            MethodInfo patchedOpenChestInterrupt = AccessTools.Method(typeof(ItemPatches), "InterruptOpening_ChestPatch");
+            harmony.Patch(originalOpenChestInterrupt, new HarmonyMethod(patchedOpenChestInterrupt));
 
-            MethodInfo originalCheckOpenChest = AccessTools.PropertyGetter(typeof(Chest), "shouldShowAsOpen");
-            MethodInfo patchedCheckOpenChest = AccessTools.Method(typeof(ItemPatches), "shouldShowAsOpen_Debug_ChestPatch");
-            harmony.Patch(originalCheckOpenChest, null, new HarmonyMethod(patchedCheckOpenChest));
-            */
 
             MethodInfo originalFairyCount = AccessTools.Method(typeof(FairyCollection), "getFairyCount");
             MethodInfo patchedFairyCount = AccessTools.Method(typeof(ItemPatches), "getFairyCount_Debug_ChestPatch");
@@ -53,29 +52,32 @@ namespace TunicRandomizer.Patches
             MethodInfo patchedChestItemQuantity = AccessTools.Method(typeof(ItemPatches), "itemQuantityFromDatabase_ChestPatch");
             harmony.Patch(originalChestItemQuantity, new HarmonyMethod(patchedChestItemQuantity));
 
+
+
             MethodInfo originalPickupItem = AccessTools.Method(typeof(ItemPickup), "onGetIt");
             MethodInfo patchedPickupItem = AccessTools.Method(typeof(ItemPatches), "onGetIt_ItemPickupPatch");
             harmony.Patch(originalPickupItem, new HarmonyMethod(patchedPickupItem));
 
+            
+
         }
 
-        public static bool IInteractionReceiver_Interact_ChestPatch(Item i, Chest __instance)
+        public static bool PlayOpenChestAnimation_PlayerPatch(PlayerCharacter __instance, Chest chest)
         {
             s_isOriginalFairyChest = false;
-            s_nextRandomItem = null;
             // ORIGINAL ITEM
             Item item = null;
             int money = 0;
-            if (!__instance.isFairy)
+            if (!chest.isFairy)
             {
                 try
                 {
-                    item = __instance.itemContentsfromDatabase;
+                    item = chest.itemContentsfromDatabase;
                 }
                 catch (Exception) { }
                 try
                 {
-                    money = __instance.moneySprayQuantityFromDatabase;
+                    money = chest.moneySprayQuantityFromDatabase;
                 }
                 catch (Exception) { }
             }
@@ -93,53 +95,46 @@ namespace TunicRandomizer.Patches
             }
             else
             {
-                Plugin.Logger.LogWarning($"Chest: {__instance.name} has no valid contents or is fairy chest");
+                Plugin.Logger.LogWarning($"Chest: {chest.name} has no valid contents or is fairy chest");
                 s_isOriginalFairyChest = true;
             }
 
             //Plugin.s_openedChests.Add(__instance.chestID); not needed anymore
-            RandomItemStore originalItem = RandomItemStore.ChestToRandomItemStore(__instance);
+            RandomItemStore originalItem = RandomItemStore.ChestToRandomItemStore(chest);
             if(TunicArchipelagoClient.IsConnected)
             {
                 s_isOpeningChest = true;
-                TunicArchipelagoClient.CheckLocation(originalItem);
-            }
-            else
-            {
-                s_nextRandomItem = null;
-            }
+                s_chestOpeningFailed = false;
+                chest.isFairy = false;
+                int openingDelay = (int)(PlayerCharacter.openChestAnimationTransitionDuration * 1000) + 1000;
 
-            //RANDOMIZED ITEM
-            /*
-            RandomItemStore randomChestItem = Plugin.randomizer.GetRandomizedItem(originalItem.instanceId, __instance);
-            s_nextRandomChest = randomChestItem;
-
-            if (randomChestItem.itemType == "FAIRY")
-            {
-                Plugin.Logger.LogInfo($"Randomized item: Fairy");
-                __instance.isFairy = true;
-                s_fairiesFound += 1;
-
-                LanguageLine fairyAcquiredText = ScriptableObject.CreateInstance<LanguageLine>();
-                fairyAcquiredText.text = $"\"Fairy Acquired\"";
-                NPCDialogue.DisplayDialogue(fairyAcquiredText, true);
-            } else __instance.isFairy = false;
-            if (randomChestItem.itemType == "MONEY")
-            {
-                Plugin.Logger.LogInfo($"Randomized item: {randomChestItem.moneyQuantity}$");
+                if (TunicArchipelagoClient.IsConnected && s_isOpeningChest)
+                {
+                    Task.Delay(openingDelay).ContinueWith((task) =>
+                    {
+                        s_isOpeningChest = false;
+                        if(s_chestOpeningFailed)
+                        {
+                            Plugin.Logger.LogInfo($"Failed to open chest");
+                        }
+                        else
+                        {
+                            Plugin.Logger.LogInfo($"Chest was successfully opened after {openingDelay}ms with additional check delay of 1000ms");
+                            TunicArchipelagoClient.CheckLocation(originalItem);
+                        }
+                    });
+                }
             }
-            else if (randomChestItem.itemName != null)
-            {
-                Plugin.Logger.LogInfo($"Randomized item: {randomChestItem.itemName} x {randomChestItem.itemQuantity}");
-            }
-            else
-            {
-                Plugin.Logger.LogError($"Unhandled randomization for original chest: {__instance.name} ({originalItem.instanceId}). Random Item {randomChestItem.itemContainerName} ({randomChestItem.instanceId}) {randomChestItem.itemType}");
-            }
-            */
+            
 
             return true;
 
+        }
+
+        public static void InterruptOpening_ChestPatch()
+        {
+            Plugin.Logger.LogInfo("Interrupt chest opening!");
+            s_chestOpeningFailed = true;
         }
 
         /**
@@ -165,59 +160,28 @@ namespace TunicRandomizer.Patches
 
         public static bool moneySprayQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
         {
-            if (s_nextRandomItem == null) return true;
-
-            if (s_nextRandomItem.itemType == TunicArchipelagoClient.TunicArchipelagoItemType.Money)
-            {
-                __result = s_nextRandomItem.quantity;
-            }
+            if (!TunicArchipelagoClient.IsConnected || !s_isOpeningChest) return true;
+            
+            __result = 0;
 
             return false;
         }
 
         public static bool itemContentsfromDatabase_ChestPatch(Chest __instance, ref Item __result)
         {
-            if (s_nextRandomItem == null) return true;
+            if (!TunicArchipelagoClient.IsConnected || !s_isOpeningChest) return true;
 
             __result = null;
 
-            if (s_nextRandomItem.itemName != null)
-            {
-                // HANDLE TRINKETS
-                if (s_nextRandomItem.itemType == TunicArchipelagoClient.TunicArchipelagoItemType.Trinket)
-                {
-                    TrinketItem newItem = null;
-                    foreach (TrinketItem trinketItem in Resources.FindObjectsOfTypeAll<TrinketItem>())
-                    {
-                        if (trinketItem.name == s_nextRandomItem.itemName)
-                        {
-                            newItem = trinketItem;
-                            break;
-                        }
-                    }
-
-                    if (newItem == null)
-                    {
-                        Plugin.Logger.LogError($"Trinket item {s_nextRandomItem.itemName} not found in Assets");
-                    }
-                    else
-                    {
-                        __result = newItem;
-                    }
-                }
-                else // HANDLE OTHER ITEMS
-                {
-                    __result = Inventory.GetItemByName(s_nextRandomItem.itemName);
-                }
-            }
             return false;
         }
 
         public static bool itemQuantityFromDatabase_ChestPatch(Chest __instance, ref int __result)
         {
-            if (s_nextRandomItem == null) return true;
+            if (!TunicArchipelagoClient.IsConnected || !s_isOpeningChest) return true;
 
-            __result = s_nextRandomItem.quantity;
+            __result = 0;
+
             return false;
         }
 
@@ -244,6 +208,8 @@ namespace TunicRandomizer.Patches
 
         public static void AwardItemToPlayer(TunicArchipelagoClient.TunicArchipelagoItem archipelagoItem)
         {
+            Plugin.Logger.LogInfo("Handing out new item");
+
             //RANDOMIZED ITEM
             if (archipelagoItem.itemType == TunicArchipelagoClient.TunicArchipelagoItemType.Fairy)
             {
@@ -280,7 +246,7 @@ namespace TunicRandomizer.Patches
 
                     if (newItem == null)
                     {
-                        Plugin.Logger.LogError($"Trinket item {s_nextRandomItem.itemName} not found in Assets");
+                        Plugin.Logger.LogError($"Trinket item {archipelagoItem.itemName} not found in Assets");
                     }
 
                     newItem.Quantity += 1;
@@ -299,6 +265,7 @@ namespace TunicRandomizer.Patches
             {
                 Plugin.Logger.LogError($"Unhandled randomization for original pickup item: {archipelagoItem.itemName} ({archipelagoItem.itemType}) [{archipelagoItem.archipelagoItemId}].");
             }
+
         }
     }
 }

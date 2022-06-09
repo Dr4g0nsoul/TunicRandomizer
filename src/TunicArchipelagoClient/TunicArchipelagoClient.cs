@@ -60,12 +60,7 @@ namespace TunicRandomizer.TunicArchipelago
         {
             string newItemName = helper.PeekItemName();
             TunicArchipelagoItem archipelagoItem = GenerateArchipelagoItem(newItemName);
-            ItemPatches.s_nextRandomItem = archipelagoItem;
-            if(!ItemPatches.s_isOpeningChest)
-            {
-                ItemPatches.AwardItemToPlayer(archipelagoItem);
-            }
-            ItemPatches.s_isOpeningChest = false;
+            ItemPatches.s_nextArchipelagoItem = archipelagoItem;
             helper.DequeueItem();
         }
 

@@ -125,6 +125,12 @@ namespace TunicRandomizer.Patches
                 else if(Input.GetKeyDown(KeyCode.Alpha8)) s_spawnInput += "8";
                 else if(Input.GetKeyDown(KeyCode.Alpha9)) s_spawnInput += "9";
             }
+
+            if(ItemPatches.s_nextArchipelagoItem != null)
+            {
+                ItemPatches.AwardItemToPlayer(ItemPatches.s_nextArchipelagoItem);
+                ItemPatches.s_nextArchipelagoItem = null;
+            }
         }
     }
 }
